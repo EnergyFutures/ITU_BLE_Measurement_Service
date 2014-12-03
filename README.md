@@ -5,4 +5,4 @@ Using
 -Softdevice 110 v. 521
 See this video: https://www.youtube.com/watch?v=FMdcDRUT45g
 
-![](https://raw.github.com/username/projectname/branch/path/to/img.png)
+![](https://github.com/EnergyFutures/ITU_BLE_Measurement_Service/img.png)
