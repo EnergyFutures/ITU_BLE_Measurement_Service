@@ -1,9 +1,10 @@
 ITU BLE Measurement Service
 ===========================
 Using
--RFDuino [Nordic nRF51288 chip] hardware
--Softdevice 110 v. 521
--Keil uVision5
+- RFDuino [Nordic nRF51288 chip] hardware
+- Softdevice 110 v. 521
+- Keil uVision5
+
 See this video: https://www.youtube.com/watch?v=FMdcDRUT45g
 
 The following depicts the measurement service with the two characteristics:
