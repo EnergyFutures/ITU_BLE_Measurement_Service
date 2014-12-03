@@ -57,13 +57,13 @@
 #define SD_AMP_PIN  ADC_CONFIG_PSEL_AnalogInput5
 
 #define DEVICE_NAME                          "ITU SENSOR"			          /**< Name of device. Will be included in the advertising data. */
-#define MANUFACTURER_NAME                    "ITU 4D21"						                      /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME                    "4D21"						                      /**< Manufacturer. Will be passed to Device Information Service. */
 #define MODEL_NUM                            "T1000"     													      /**< Model number. Will be passed to Device Information Service. */
 #define MANUFACTURER_ID                      0x1122334455                               /**< Manufacturer ID, part of System ID. Will be passed to Device Information Service. */
 #define ORG_UNIQUE_ID                        0x667788                                   /**< Organizational Unique ID, part of System ID. Will be passed to Device Information Service. */
 
-#define APP_ADV_INTERVAL                     40                                         /**< The advertising interval (in units of 0.625 ms. This value corresponds to 25 ms). */
-#define APP_ADV_TIMEOUT_IN_SECONDS           180                                        /**< The advertising timeout in units of seconds. */
+#define APP_ADV_INTERVAL                     8000                                     	/**< The advertising interval (in units of 0.625 ms. This value corresponds to 5 sec). */
+#define APP_ADV_TIMEOUT_IN_SECONDS           1800																      	/**< The advertising timeout in units of seconds. 0 = no time out This value corresponds to 30 min*/
 
 #define APP_TIMER_PRESCALER                  0                                          /**< Value of the RTC1 PRESCALER register. */
 #define APP_TIMER_MAX_TIMERS                 5                                          /**< Maximum number of simultaneously created timers. */
