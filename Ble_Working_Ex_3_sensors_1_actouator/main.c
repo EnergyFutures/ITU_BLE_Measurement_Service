@@ -657,6 +657,8 @@ static void sound_gate_handler(uint32_t pins_low_to_high, uint32_t pins_high_to_
 			if(iss_struct_3.timer_running){
 				app_timer_stop(iss_struct_3.meas_timer);
 				iss_struct_3.timer_running = false;
+				int32_t amplitude = 0;
+				update_iss_measurement(&iss_struct_3, &amplitude);
 			}
 		} else if(pins_low_to_high != 0){
 			if(!iss_struct_3.timer_running){
