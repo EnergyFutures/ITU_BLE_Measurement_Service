@@ -99,6 +99,7 @@ static iss_t						 										 iss_struct_2;															/**< Struct holding th
 static iss_t						 										 iss_struct_3;															/**< Struct holding the ITU Sensor Service*/
 static ias_t						 										 ias_struct_1;															/**< Struct holding the ITU Sensor Service*/
 static uint8_t id =1;
+static bool sendZero = false;
 
 
 /* Interrupt handler for ADC data ready event */
@@ -114,7 +115,12 @@ void ADC_IRQHandler(void)
 		int32_t temp = (((NRF_ADC->RESULT * 1800)/1024) - 500 ) * 10; 
 		update_iss_measurement(&iss_struct_2, &temp);	
 	}	else if (pin == SD_AMP_PIN){
-		int32_t amplitude = ((NRF_ADC->RESULT * 3600)/1024) * 100; 
+		int32_t amplitude;
+		if(sendZero){
+			amplitude = 0; 
+		}else{
+			amplitude = ((NRF_ADC->RESULT * 3600)/1024) * 100; 
+		}
 		update_iss_measurement(&iss_struct_3, &amplitude);	
 	}
 	
@@ -652,25 +658,30 @@ static void radio_notification_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+
 static void sound_gate_handler(uint32_t pins_low_to_high, uint32_t pins_high_to_low){
-		if(pins_high_to_low != 0){
+	//Only do stuff when connected to conserv power
+	if(iss_struct_3.conn_handle != BLE_CONN_HANDLE_INVALID){
+		if((pins_high_to_low & SD_GATE_PIN_BIT) == SD_GATE_PIN_BIT){
 			if(iss_struct_3.timer_running){
 				app_timer_stop(iss_struct_3.meas_timer);
 				iss_struct_3.timer_running = false;
-				int32_t amplitude = 0;
-				update_iss_measurement(&iss_struct_3, &amplitude);
-			}
-		} else if(pins_low_to_high != 0){
-			if(!iss_struct_3.timer_running){
+				sendZero = true;
 				take_sound_measurement();
-				while(NRF_ADC->BUSY){;}
+			}
+		}else if((pins_low_to_high & SD_GATE_PIN_BIT) == SD_GATE_PIN_BIT){
+			if(!iss_struct_3.timer_running){
+				sendZero = false;
+				take_sound_measurement();
 				start_measurement_timer(&iss_struct_3);
 			}
 		}
+	}
 }
 
 /**@brief Function for initializing the GPIOTE handler module.
  */
+
 static void gpiote_init(void)
 {
 	//The GPIOTE users are responsible for configuring all their corresponding pins, except the SENSE field, which should be initialized to GPIO_PIN_CNF_SENSE_Disabled.
