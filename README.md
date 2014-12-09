@@ -14,10 +14,13 @@ Measurement VALUE & Measurement CONFIG
 
 
 The Value characteristic is only for "presentation": Read and notify
+
 The Config characteristic is for configuration:
 - How the value characteristic is presented (which fields are transmitted)
 - To override specific fields, e.g. to set a new sampling freq or change the sequence number
 
-We use the IEEE Float for the measurement value.. e.g the temperature value (Exponent: -2, Mantissa: 2550) in celsius
+We use the IEEE Float for the measurement value.. fx.
+
+The temperature 25.50 celsius = (Exponent: -2, Mantissa: 2550)
 
 This value is always present.
