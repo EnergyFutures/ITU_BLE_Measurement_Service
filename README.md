@@ -9,7 +9,6 @@ See this video: https://www.youtube.com/watch?v=FMdcDRUT45g
 
 The following depicts the measurement service with the two characteristics:
 
-Measurement VALUE & Measurement CONFIG
 ![](https://raw.githubusercontent.com/EnergyFutures/ITU_BLE_Measurement_Service/master/img.jpg)
 
 
