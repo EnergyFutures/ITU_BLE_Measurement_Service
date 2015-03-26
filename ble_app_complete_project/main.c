@@ -46,21 +46,11 @@
 #include "mote_config.h"
 #include "read_all_sensor_service.h"
 
-
-
-#define connectable_transmit_power_db 4
-#define nonconnectable_transmit_power_db -16
-
-#define IS_SRVC_CHANGED_CHARACT_PRESENT 0                                               /**< Include or not the service_changed characteristic. if not enabled, the server's database cannot be changed for the lifetime of the device*/
-
-
-
 //Device Information Service
-#define MANUFACTURER_NAME                    "4D21"						                          /**< Manufacturer. Will be passed to Device Information Service. */
-#define MODEL_NUM                            "T1000"     													      /**< Model number. Will be passed to Device Information Service. */
-#define MANUFACTURER_ID                      0x1122334455                               /**< Manufacturer ID, part of System ID. Will be passed to Device Information Service. */
-#define ORG_UNIQUE_ID                        0x667788                                   /**< Organizational Unique ID, part of System ID. Will be passed to Device Information Service. */
-
+#define MANUFACTURER_NAME                    "DENMARK ITU 4D21"						               /**< Manufacturer. Will be passed to Device Information Service. */
+#define MODEL_NUM                            "BLEoT SENSOR"     												 /**< Model number. Will be passed to Device Information Service. */
+#define MANUFACTURER_ID                      ITU_COMPANY_ID                              /**< Manufacturer ID, part of System ID. Will be passed to Device Information Service. */
+#define ORG_UNIQUE_ID                        ITU_COMPANY_ID                              /**< Organizational Unique ID, part of System ID. Will be passed to Device Information Service. */
 #define DEAD_BEEF                       		 0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 static uint16_t                         		 m_conn_handle = BLE_CONN_HANDLE_INVALID;    /**< Handle of the current connection. */
@@ -192,9 +182,6 @@ static void gap_params_init(void)
                                           strlen(DEVICE_NAME));
     APP_ERROR_CHECK(err_code);
 
-    /*err_code = sd_ble_gap_appearance_set(BLE_APPEARANCE_GENERIC_DISPLAY);
-    APP_ERROR_CHECK(err_code);*/
-
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
 
     gap_conn_params.min_conn_interval = MIN_CONN_INTERVAL;
@@ -269,26 +256,15 @@ static void advertising_init(void){
     adv_params.p_peer_addr = NULL;
     adv_params.fp          = BLE_GAP_ADV_FP_ANY;
 		
-		uint16_t APP_ADV_INTERVAL;
+
 		uint8_t APP_ADV_TIMEOUT_IN_SECONDS;
-		if(total_services_size == 1 && actuators_size == 1){
-			APP_ADV_INTERVAL  = MSEC_TO_UNITS(1100, UNIT_0_625_MS);           
+		if(total_services_size == 1){
+			//THIS VALUE MAY BE OVERIDDEN IN services_init()
 			APP_ADV_TIMEOUT_IN_SECONDS = 0;
-		}else if(total_services_size == 1 && sensors_size == 1){
-			//THIS VALUE WILL BE OVERIDDEN IN services_init()
-			APP_ADV_INTERVAL  = MSEC_TO_UNITS(3100, UNIT_0_625_MS);           
-			APP_ADV_TIMEOUT_IN_SECONDS = 0;
-		}else if(actuators_size > 0){
-			//WE KNOW WE ARE USING AC/DC.. NO NEED TO CONSERVE ENERGY
-			APP_ADV_INTERVAL  = MSEC_TO_UNITS(1100, UNIT_0_625_MS);           
-			APP_ADV_TIMEOUT_IN_SECONDS = 1;
 		}else{
-			uint8_t max_sec = total_services_size == 2 ? 4 : 3;
-			//we don't want multiple adv before a timeout... hence the 1100
-			APP_ADV_INTERVAL  = MSEC_TO_UNITS((max_sec/total_services_size) * 1100, UNIT_0_625_MS);           
-			APP_ADV_TIMEOUT_IN_SECONDS = (max_sec/total_services_size);
-		}				
-    adv_params.interval    = APP_ADV_INTERVAL;
+			APP_ADV_TIMEOUT_IN_SECONDS = 1;
+		}   
+    adv_params.interval    = MSEC_TO_UNITS(1100, UNIT_0_625_MS);
     adv_params.timeout     = APP_ADV_TIMEOUT_IN_SECONDS;
 }
 
@@ -316,7 +292,7 @@ static void its_broadcast_encode_and_set(void * p_itu_service_struct, uint8_t ty
 			sd_ble_gap_tx_power_set(connectable_transmit_power_db);
 		}
 	
-		//MISC (xxxxyyyz) = xxxx for battery procentage in increments of 10, yyy for mote type (sensor or actuator or mix), z for buffer full
+		//MISC (xxxxyyyz) = xxxx for battery procentage in increments of 10, yyy for service type (sensor or actuator or mix), z for buffer full
     if (header.misc_present)
     {
 				uint8_t misc = 0x00;
@@ -443,7 +419,7 @@ static void init_ISS_struct (itu_service_t * iss_struct, uint32_t * err_code){
 		service->ID = 4;
 		service->ID_present = false;
 	
-		service->samp_freq_in_m_sec = 3000;
+		service->samp_freq_in_m_sec = DEFAULT_SAMPLING_FREQUENCY_IN_MS;
 		service->samp_freq_present = false;
 
 		// EACH SENSOR SHOULD CONFIGURE ITS SAMPLING FREQUENCY UPDATE FUNCTION IN THE INIT HOOK
@@ -470,6 +446,7 @@ static void services_init(void)
 			init_ISS_struct(sensors[i],&err_code);
 			APP_ERROR_CHECK(err_code);
 		}
+		
 		//FIXME what if we change the freq in the future
 		if(total_services_size == 1 && sensors_size == 1){
 			iss_t * service = sensors[0]->service;
@@ -478,7 +455,7 @@ static void services_init(void)
 		}
 		
 		for(uint8_t i = 0; i < actuators_size; i++){
-			ias_t * service = actuators[0]->service;
+			ias_t * service = actuators[i]->service;
 			memset(service, 0, sizeof(ias_t));
 			err_code =  ias_initialize(service);
 			APP_ERROR_CHECK(err_code);
@@ -667,7 +644,7 @@ static void ble_stack_init(void)
     // Enable BLE stack 
     ble_enable_params_t ble_enable_params;
     memset(&ble_enable_params, 0, sizeof(ble_enable_params));
-    ble_enable_params.gatts_enable_params.service_changed = IS_SRVC_CHANGED_CHARACT_PRESENT;
+    ble_enable_params.gatts_enable_params.service_changed = 0;
     err_code = sd_ble_enable(&ble_enable_params);
     APP_ERROR_CHECK(err_code);
 

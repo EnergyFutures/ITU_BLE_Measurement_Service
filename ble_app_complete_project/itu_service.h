@@ -17,21 +17,34 @@
 #define BLE_UUID_ITU_ACTUATOR_SERVICE    		                             0xFFA1
 #define BLE_UUID_ITU_READ_ALL_MEASUREMENT_SERVICE                        0xFFA2
 
-#define BLE_UUID_ITU_SENSOR_TYPE_NOT_SET														 		 0x00
-#define BLE_UUID_ITU_SENSOR_TYPE_TEMPERATURE														 0x01
-#define BLE_UUID_ITU_SENSOR_TYPE_LIGHT													 				 0x02
-#define BLE_UUID_ITU_SENSOR_TYPE_SOUND                                	 0x03
-#define BLE_UUID_ITU_SENSOR_MULTI_TYPE															 		 0x04
-
-#define BLE_UUID_ITU_ACTUATOR_TYPE_NOT_SET													 		 0x70
-#define BLE_UUID_ITU_ACTUATOR_TYPE_WINDOW														 		 0x71
-#define BLE_UUID_ITU_ACTUATOR_TYPE_AC																 		 0x72
+#define BLE_UUID_ITU_SENSOR_TYPE_NOT_SET														 		 0
+#define BLE_UUID_ITU_SENSOR_TYPE_TEMPERATURE														 1
+#define BLE_UUID_ITU_SENSOR_TYPE_LIGHT													 				 2
+#define BLE_UUID_ITU_SENSOR_TYPE_SOUND                                	 3
+#define BLE_UUID_ITU_SENSOR_TYPE_HUMIDITY															 	 4
+#define BLE_UUID_ITU_SENSOR_TYPE_MOTION																 	 5
+#define BLE_UUID_ITU_SENSOR_RESERVED1_TYPE															 6
+#define BLE_UUID_ITU_SENSOR_RESERVED2_TYPE															 7
+#define BLE_UUID_ITU_SENSOR_RESERVED3_TYPE															 8
+#define BLE_UUID_ITU_SENSOR_RESERVED4_TYPE															 9
+#define BLE_UUID_ITU_SENSOR_RESERVED5_TYPE															 10
+#define BLE_UUID_ITU_SENSOR_RESERVED6_TYPE															 11
+#define BLE_UUID_ITU_SENSOR_RESERVED7_TYPE															 12
+#define BLE_UUID_ITU_SENSOR_RESERVED8_TYPE															 13
+#define BLE_UUID_ITU_SENSOR_RESERVED9_TYPE															 14
+#define BLE_UUID_ITU_SENSOR_RESERVED10_TYPE															 15
+#define BLE_UUID_ITU_SENSOR_RESERVED11_TYPE															 16
+#define BLE_UUID_ITU_ACTUATOR_TYPE_NOT_SET													 		 17
+#define BLE_UUID_ITU_ACTUATOR_TYPE_WINDOW														 		 18
+#define BLE_UUID_ITU_ACTUATOR_TYPE_AC																 		 19
 
 #define BLE_UUID_ITU_SENSOR_MAKE_NOT_SET														 		 0x00
 #define BLE_UUID_ITU_SENSOR_MAKE_DHT22																	 0x01
 #define BLE_UUID_ITU_SENSOR_MAKE_TMP36													 				 0x02
 #define BLE_UUID_ITU_SENSOR_MAKE_LMT85													 				 0x03
 #define BLE_UUID_ITU_SENSOR_MAKE_TSL2561													 			 0x04
+#define BLE_UUID_ITU_SENSOR_MAKE_SI7021 													 			 0x05
+#define BLE_UUID_ITU_SENSOR_MAKE_EKMB1303112 														 0X06
 
 #define BLE_UUID_ITU_ACTUATOR_MAKE_NOT_SET													 		 0x70
 #define BLE_UUID_ITU_ACTUATOR_MAKE_SSD_RELAY												 		 0x71

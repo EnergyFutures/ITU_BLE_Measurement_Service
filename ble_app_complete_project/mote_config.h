@@ -8,13 +8,16 @@
 //REMEMBER TO INCLUDE THE SENSORS
 #include "light_sensor_TSL2561.h"
 #include "temp_sensor_tmp36.h"
+#include "HT_sensor_SI7021.h"
 
 //REMEMBER TO REGISTER YOUR SENSORS HERE AND COUNT UP
-#define sensors_size 0  // if no sensors, then set to 0
-itu_service_t *sensors[2]; // if no sensors, then set to 1
-static void registerSensors(void){	
+#define sensors_size 4  // if no sensors, then set to 0
+itu_service_t *sensors[4]; // if no sensors, then set to 1
+static void registerSensors(void){		
 	sensors[0] = getLightSensorTSL2561();
 	sensors[1] = getTempSensorTmp36();
+	sensors[2] = getHumiditySensorSI7021();
+	sensors[3] = getTempSensorSI7021();
 }
 
 
@@ -24,7 +27,7 @@ static void registerSensors(void){
 
 //REMEMBER TO REGISTER YOUR ACTUATORS HERE AND COUNT UP
 itu_service_t *actuators[2]; // if no actuators, then set to 1
-#define actuators_size 1 // if no actuators, then set to 0
+#define actuators_size 2 // if no actuators, then set to 0
 static void registerActuators(void){
 	actuators[0] = get_window_actuator();
 	actuators[1] = get_ac_actuator();

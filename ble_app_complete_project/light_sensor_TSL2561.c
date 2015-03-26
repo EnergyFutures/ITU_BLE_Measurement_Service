@@ -56,17 +56,17 @@ void twi_light_read_measurement_sche(void *data, uint16_t size){
 		// POWER ON and wait 450 ms
 		twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CONTROL;
 		twi_data_tx[1] = TSL2561_CONTROL_POWERON;
-		twi_master_write(light_sens_adr, twi_data_tx, 2);
+		twi_master_write(light_sens_adr, twi_data_tx, 2,&my_twi_config);
 		app_timer_start(twi_timer, APP_TIMER_TICKS(450, APP_TIMER_PRESCALER), NULL);
 	}else{
 		uint16_t ch0,ch1 = 0;
 		twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CHAN0_LOW;	
-		twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2);
+		twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2,&my_twi_config);
 		ch0 = twi_data_rx[0];
 		ch0 = ch0 | (((uint16_t)(twi_data_rx[1]))<<8);
 		
 		twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CHAN1_LOW;
-		twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2);
+		twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2,&my_twi_config);
 		ch1 = twi_data_rx[0];
 		ch1 = ch1 | (((uint16_t)(twi_data_rx[1]))<<8);
 		
@@ -118,10 +118,12 @@ static void update_measurement_samp_freq(){
 }
 
 static void init(void){
-	my_twi_config.pinselect_scl = light_TWI_SCL;
-	my_twi_config.pinselect_sda = light_TWI_SDA;
+	my_twi_config.twi_pinselect_scl = light_TWI_SCL;
+	my_twi_config.twi_pinselect_sda = light_TWI_SDA;
+	my_twi_config.twi_ppi_ch = 0;
+	my_twi_config.twi_interrupt_no = SPI0_TWI0_IRQn;
+  my_twi_config.twi = NRF_TWI0;
 	my_twi_config.frequency     = TWI_FREQ_400KHZ;
-	my_twi_config.blocking_mode = TWI_BLOCKING_ENABLED;
 	if(!twi_master_init(&my_twi_config))
 	{
 			APP_ERROR_CHECK(666);

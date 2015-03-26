@@ -17,48 +17,23 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-
-// IMPORTANT! Set this to 1 if using a SoftDevice (like the BLE or ANT stacks), othewise set it to 0
-#define TWI_USE_SOC_API         1
-
-#define TWI_PPI_CH0             0
+#include <nrf51.h>
 
 // Set the interrupt priority, different values for use with or without a SoftDevice
 #define TWI_IRQ_PRIORITY_SD     3   // NRF_APP_PRIORITY_HIGH = 1, NRF_APP_PRIORITY_LOW = 3, only these values are accepted
-#define TWI_IRQ_PRIORITY_NO_SD  1   // 3, 2, 1 or 0 - lower values -> higher priority
-
-// Set these defines to decide which TWI interface to use, either TWI0 or TWI1 in the nRF51822
-#define TWI                     NRF_TWI1
-#define TWI_INTERRUPT           SPI1_TWI1_IRQHandler
-#define TWI_INTERRUPT_NO        SPI1_TWI1_IRQn
-
-// Set this to 1 to show TWI related warnings and info, like whether or not the library is configured for use with a SoftDevice
-#define TWI_SHOW_WARNINGS       0
-
-// Print a warning to show clearly if the library is configured for use with or without a SoftDevice
-#if(TWI_SHOW_WARNINGS == 1)
-#if(TWI_USE_SOC_API == 1)
-#warning TWI library configured for use with a SoftDevice. Change TWI_USE_SOC_API in twi_master_int.h if the SoftDevice is not used!
-#if(TWI_IRQ_PRIORITY_SD != 1 && TWI_IRQ_PRIORITY_SD != 3)
-#error When using a SoftDevice only interrup priorities 1 and 3 are accepted, change TWI_IRQ_PRIORITY_SD accordingly!
-#endif
-#if(TWI_IRQ_PRIORITY_SD == 3)
-#warning When using interrupt priority 3 with a SoftDevice you can not use the TWI library in the SoftDevice callback functions!
-#endif
-#else
-#warning TWI library configured for use without a SoftDevice. Change TWI_USE_SOC_API in twi_master_int.h if the SoftDevice should be used!
-#endif
-#endif
 
 enum {TWI_FREQ_100KHZ = 0, TWI_FREQ_400KHZ = 1};
-enum {TWI_BLOCKING_DISABLED = 0, TWI_BLOCKING_ENABLED = 1};
 
 typedef struct
 {
-    uint8_t pinselect_scl;
-    uint8_t pinselect_sda;
-    uint8_t frequency     : 1;
-    uint8_t blocking_mode : 1;    
+  uint8_t twi_pinselect_scl;
+  uint8_t twi_pinselect_sda;
+  uint8_t twi_ppi_ch;  
+	IRQn_Type twi_interrupt_no;
+	NRF_TWI_Type *twi;
+	bool twi_operation_complete;
+	bool twi_ack_received;
+	uint8_t frequency     : 1;
 }twi_config_t;
 
 /** @file
@@ -86,17 +61,17 @@ typedef struct
 /* These macros are needed to see if the slave is stuck and we as master send dummy clock cycles to end its wait */
 /*lint -e717 -save "Suppress do {} while (0) for these macros" */
 /*lint ++flb "Enter library region" */
-#define TWI_SCL_HIGH()   do { NRF_GPIO->OUTSET = (1UL << twi_pinselect_scl); } while(0)   /*!< Pulls SCL line high */
-#define TWI_SCL_LOW()    do { NRF_GPIO->OUTCLR = (1UL << twi_pinselect_scl); } while(0)   /*!< Pulls SCL line low  */
-#define TWI_SDA_HIGH()   do { NRF_GPIO->OUTSET = (1UL << twi_pinselect_sda);  } while(0)   /*!< Pulls SDA line high */
-#define TWI_SDA_LOW()    do { NRF_GPIO->OUTCLR = (1UL << twi_pinselect_sda);  } while(0)   /*!< Pulls SDA line low  */
-#define TWI_SDA_INPUT()  do { NRF_GPIO->DIRCLR = (1UL << twi_pinselect_sda);  } while(0)   /*!< Configures SDA pin as input  */
-#define TWI_SDA_OUTPUT() do { NRF_GPIO->DIRSET = (1UL << twi_pinselect_sda);  } while(0)   /*!< Configures SDA pin as output */
-#define TWI_SCL_OUTPUT() do { NRF_GPIO->DIRSET = (1UL << twi_pinselect_scl); } while(0)   /*!< Configures SCL pin as output */
+#define TWI_SCL_HIGH()   do { NRF_GPIO->OUTSET = (1UL << cfg->twi_pinselect_scl); } while(0)   /*!< Pulls SCL line high */
+#define TWI_SCL_LOW()    do { NRF_GPIO->OUTCLR = (1UL << cfg->twi_pinselect_scl); } while(0)   /*!< Pulls SCL line low  */
+#define TWI_SDA_HIGH()   do { NRF_GPIO->OUTSET = (1UL << cfg->twi_pinselect_sda);  } while(0)   /*!< Pulls SDA line high */
+#define TWI_SDA_LOW()    do { NRF_GPIO->OUTCLR = (1UL << cfg->twi_pinselect_sda);  } while(0)   /*!< Pulls SDA line low  */
+#define TWI_SDA_INPUT()  do { NRF_GPIO->DIRCLR = (1UL << cfg->twi_pinselect_sda);  } while(0)   /*!< Configures SDA pin as input  */
+#define TWI_SDA_OUTPUT() do { NRF_GPIO->DIRSET = (1UL << cfg->twi_pinselect_sda);  } while(0)   /*!< Configures SDA pin as output */
+#define TWI_SCL_OUTPUT() do { NRF_GPIO->DIRSET = (1UL << cfg->twi_pinselect_scl); } while(0)   /*!< Configures SCL pin as output */
 /*lint -restore */
 
-#define TWI_SDA_READ() ((NRF_GPIO->IN >> twi_pinselect_sda) & 0x1UL)                     /*!< Reads current state of SDA */
-#define TWI_SCL_READ() ((NRF_GPIO->IN >> twi_pinselect_scl) & 0x1UL)                    /*!< Reads current state of SCL */
+#define TWI_SDA_READ() ((NRF_GPIO->IN >> cfg->twi_pinselect_sda) & 0x1UL)                     /*!< Reads current state of SDA */
+#define TWI_SCL_READ() ((NRF_GPIO->IN >> cfg->twi_pinselect_scl) & 0x1UL)                    /*!< Reads current state of SCL */
 
 #define TWI_DELAY() nrf_delay_us(4) /*!< Time to wait when pin states are changed. For fast-mode the delay can be zero and for standard-mode 4 us delay is sufficient. */
 
@@ -112,15 +87,11 @@ typedef struct
  */
 bool twi_master_init(twi_config_t *cfg);
 
-bool twi_master_write(uint8_t address, uint8_t *data, uint8_t data_length);
+bool twi_master_write(uint8_t address, uint8_t *data, uint8_t data_length,twi_config_t *cfg);
 
-bool twi_master_read(uint8_t address, uint8_t *data, uint8_t data_length);
+bool twi_master_read(uint8_t address, uint8_t *data, uint8_t data_length,twi_config_t *cfg);
 
-bool twi_master_write_read(uint8_t address, uint8_t *tx_data, uint8_t tx_data_length, uint8_t *rx_data, uint8_t rx_data_length);
-
-bool twi_wait_for_completion(void);
-
-bool is_twi_completed(void);
+bool twi_master_write_read(uint8_t address, uint8_t *tx_data, uint8_t tx_data_length, uint8_t *rx_data, uint8_t rx_data_length,twi_config_t *cfg);
 
 /*lint --flb "Leave library region" */
 #endif

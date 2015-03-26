@@ -519,6 +519,16 @@
               <FilePath>.\..\main.c</FilePath>
             </File>
             <File>
+              <FileName>main.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\main.h</FilePath>
+            </File>
+            <File>
+              <FileName>mote_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\mote_config.h</FilePath>
+            </File>
+            <File>
               <FileName>sensor_service.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\sensor_service.c</FilePath>
@@ -527,46 +537,6 @@
               <FileName>simple_actuator_service.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\simple_actuator_service.c</FilePath>
-            </File>
-            <File>
-              <FileName>main.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\main.h</FilePath>
-            </File>
-            <File>
-              <FileName>twi_master_int.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\twi_master_int.c</FilePath>
-            </File>
-            <File>
-              <FileName>twi_master_int.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\twi_master_int.h</FilePath>
-            </File>
-            <File>
-              <FileName>TSL2561.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\TSL2561.h</FilePath>
-            </File>
-            <File>
-              <FileName>light_sensor_TSL2561.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\light_sensor_TSL2561.c</FilePath>
-            </File>
-            <File>
-              <FileName>temp_sensor_tmp36.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\temp_sensor_tmp36.c</FilePath>
-            </File>
-            <File>
-              <FileName>temp_sensor_tmp36.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\temp_sensor_tmp36.h</FilePath>
-            </File>
-            <File>
-              <FileName>pstorage_platform.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\pstorage_platform.h</FilePath>
             </File>
             <File>
               <FileName>read_all_sensor_service.c</FileName>
@@ -579,14 +549,29 @@
               <FilePath>..\read_all_sensor_service.h</FilePath>
             </File>
             <File>
-              <FileName>window_actuator.h</FileName>
+              <FileName>twi_master_int.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\twi_master_int.c</FilePath>
+            </File>
+            <File>
+              <FileName>twi_master_int.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\window_actuator.h</FilePath>
+              <FilePath>..\twi_master_int.h</FilePath>
+            </File>
+            <File>
+              <FileName>pstorage_platform.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\pstorage_platform.h</FilePath>
             </File>
             <File>
               <FileName>window_actuator.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\window_actuator.c</FilePath>
+            </File>
+            <File>
+              <FileName>window_actuator.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\window_actuator.h</FilePath>
             </File>
             <File>
               <FileName>ac_actuator.c</FileName>
@@ -609,14 +594,44 @@
               <FilePath>..\window_actuator_config.h</FilePath>
             </File>
             <File>
-              <FileName>mote_config.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\mote_config.h</FilePath>
+              <FileName>HT_sensor_SI7021.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HT_sensor_SI7021.c</FilePath>
             </File>
             <File>
-              <FileName>TSL2561_config.h</FileName>
+              <FileName>HT_sensor_SI7021.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\TSL2561_config.h</FilePath>
+              <FilePath>..\HT_sensor_SI7021.h</FilePath>
+            </File>
+            <File>
+              <FileName>HT_sensor_SI7021_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\HT_sensor_SI7021_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>light_sensor_TSL2561.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\light_sensor_TSL2561.c</FilePath>
+            </File>
+            <File>
+              <FileName>light_sensor_TSL2561.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\light_sensor_TSL2561.h</FilePath>
+            </File>
+            <File>
+              <FileName>light_sensor_TSL2561_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\light_sensor_TSL2561_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>temp_sensor_tmp36.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\temp_sensor_tmp36.c</FilePath>
+            </File>
+            <File>
+              <FileName>temp_sensor_tmp36.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\temp_sensor_tmp36.h</FilePath>
             </File>
             <File>
               <FileName>temp_sensor_tmp36_config.h</FileName>
@@ -1223,6 +1238,16 @@
               <FilePath>.\..\main.c</FilePath>
             </File>
             <File>
+              <FileName>main.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\main.h</FilePath>
+            </File>
+            <File>
+              <FileName>mote_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\mote_config.h</FilePath>
+            </File>
+            <File>
               <FileName>sensor_service.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\sensor_service.c</FilePath>
@@ -1231,46 +1256,6 @@
               <FileName>simple_actuator_service.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\simple_actuator_service.c</FilePath>
-            </File>
-            <File>
-              <FileName>main.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\main.h</FilePath>
-            </File>
-            <File>
-              <FileName>twi_master_int.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\twi_master_int.c</FilePath>
-            </File>
-            <File>
-              <FileName>twi_master_int.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\twi_master_int.h</FilePath>
-            </File>
-            <File>
-              <FileName>TSL2561.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\TSL2561.h</FilePath>
-            </File>
-            <File>
-              <FileName>light_sensor_TSL2561.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\light_sensor_TSL2561.c</FilePath>
-            </File>
-            <File>
-              <FileName>temp_sensor_tmp36.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\temp_sensor_tmp36.c</FilePath>
-            </File>
-            <File>
-              <FileName>temp_sensor_tmp36.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\temp_sensor_tmp36.h</FilePath>
-            </File>
-            <File>
-              <FileName>pstorage_platform.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\pstorage_platform.h</FilePath>
             </File>
             <File>
               <FileName>read_all_sensor_service.c</FileName>
@@ -1283,14 +1268,29 @@
               <FilePath>..\read_all_sensor_service.h</FilePath>
             </File>
             <File>
-              <FileName>window_actuator.h</FileName>
+              <FileName>twi_master_int.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\twi_master_int.c</FilePath>
+            </File>
+            <File>
+              <FileName>twi_master_int.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\window_actuator.h</FilePath>
+              <FilePath>..\twi_master_int.h</FilePath>
+            </File>
+            <File>
+              <FileName>pstorage_platform.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\pstorage_platform.h</FilePath>
             </File>
             <File>
               <FileName>window_actuator.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\window_actuator.c</FilePath>
+            </File>
+            <File>
+              <FileName>window_actuator.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\window_actuator.h</FilePath>
             </File>
             <File>
               <FileName>ac_actuator.c</FileName>
@@ -1313,14 +1313,44 @@
               <FilePath>..\window_actuator_config.h</FilePath>
             </File>
             <File>
-              <FileName>mote_config.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\mote_config.h</FilePath>
+              <FileName>HT_sensor_SI7021.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HT_sensor_SI7021.c</FilePath>
             </File>
             <File>
-              <FileName>TSL2561_config.h</FileName>
+              <FileName>HT_sensor_SI7021.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\TSL2561_config.h</FilePath>
+              <FilePath>..\HT_sensor_SI7021.h</FilePath>
+            </File>
+            <File>
+              <FileName>HT_sensor_SI7021_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\HT_sensor_SI7021_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>light_sensor_TSL2561.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\light_sensor_TSL2561.c</FilePath>
+            </File>
+            <File>
+              <FileName>light_sensor_TSL2561.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\light_sensor_TSL2561.h</FilePath>
+            </File>
+            <File>
+              <FileName>light_sensor_TSL2561_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\light_sensor_TSL2561_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>temp_sensor_tmp36.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\temp_sensor_tmp36.c</FilePath>
+            </File>
+            <File>
+              <FileName>temp_sensor_tmp36.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\temp_sensor_tmp36.h</FilePath>
             </File>
             <File>
               <FileName>temp_sensor_tmp36_config.h</FileName>
