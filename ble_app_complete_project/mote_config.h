@@ -2,7 +2,7 @@
 #define ITU_mote_config_H__
 #include "main.h"
 
-#define DEVICE_NAME                          "_ACTUATOR_"			                          
+#define DEVICE_NAME                          "_TESTTEST_"			                          
 #define LOCATION_NAME                        "4D21"
 
 //REMEMBER TO INCLUDE THE SENSORS
@@ -14,10 +14,10 @@
 #define sensors_size 4  // if no sensors, then set to 0
 itu_service_t *sensors[4]; // if no sensors, then set to 1
 static void registerSensors(void){		
-	sensors[0] = getLightSensorTSL2561();
-	sensors[1] = getTempSensorTmp36();
-	sensors[2] = getHumiditySensorSI7021();
-	sensors[3] = getTempSensorSI7021();
+	sensors[0] = getHumiditySensorSI7021();
+	sensors[1] = getTempSensorSI7021();
+	sensors[2] = getLightSensorTSL2561();
+	sensors[3] = getTempSensorTmp36();
 }
 
 

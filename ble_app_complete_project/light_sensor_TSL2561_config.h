@@ -1,6 +1,6 @@
 #ifndef ITU_TSL2561_config_H__
 #define ITU_TSL2561_config_H__
-#include "TSL2561.h"
+#include "light_sensor_TSL2561.h"
 
 #define light_TWI_SCL	9
 #define light_TWI_SDA	8

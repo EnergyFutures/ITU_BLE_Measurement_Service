@@ -1,6 +1,5 @@
-#include "TSL2561_config.h"
 #include "twi_master_int.h"
-#include "light_sensor_TSL2561.h"
+#include "light_sensor_TSL2561_config.h"
 #include "app_timer.h"
 #include "sensor_service.h"
 #include "app_scheduler.h"

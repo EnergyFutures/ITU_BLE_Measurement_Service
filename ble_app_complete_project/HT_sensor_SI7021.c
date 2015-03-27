@@ -18,7 +18,6 @@ static twi_config_t my_twi_config;
 static app_timer_id_t twi_timer;
 static iss_t iss_struct_h; 
 static iss_t iss_struct_t; 
-static bool temp_enabled = false;
 static bool first_run = true;
 static uint16_t last_temp_value = 0;
 static itu_service_t humidity_sensor ={.timer_init = sensor_timer_init,
@@ -45,7 +44,6 @@ itu_service_t * getHumiditySensorSI7021(void){
 }
 
 itu_service_t * getTempSensorSI7021(void){
-	temp_enabled = true;
 	return &temp_sensor;
 }
 
@@ -180,7 +178,7 @@ static void init(void){
 	iss_struct_h.type = BLE_UUID_ITU_SENSOR_TYPE_HUMIDITY;
 	iss_struct_h.make = BLE_UUID_ITU_SENSOR_MAKE_SI7021;
 	
-	iss_struct_t.p_update_samp_freq = update_measurement_samp_freq_h;
+	iss_struct_t.p_update_samp_freq = update_measurement_samp_freq_t;
 	iss_struct_t.coord = HT_COORDINATE;
 	iss_struct_t.type = BLE_UUID_ITU_SENSOR_TYPE_TEMPERATURE;
 	iss_struct_t.make = BLE_UUID_ITU_SENSOR_MAKE_SI7021;
