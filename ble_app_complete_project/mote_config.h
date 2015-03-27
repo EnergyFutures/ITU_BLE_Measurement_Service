@@ -4,20 +4,24 @@
 
 #define DEVICE_NAME                          "_TESTTEST_"			                          
 #define LOCATION_NAME                        "4D21"
+#define CONNECTABLE_TRANSMIT_POWER_DB 0
+#define NONCONNECTABLE_TRANSMIT_POWER_DB -16
+#define DEFAULT_SAMPLING_FREQUENCY_IN_MS 10000
 
 //REMEMBER TO INCLUDE THE SENSORS
 #include "light_sensor_TSL2561.h"
 #include "temp_sensor_tmp36.h"
 #include "HT_sensor_SI7021.h"
-
+#include "motion_sensor.h"
 //REMEMBER TO REGISTER YOUR SENSORS HERE AND COUNT UP
-#define sensors_size 4  // if no sensors, then set to 0
-itu_service_t *sensors[4]; // if no sensors, then set to 1
+#define sensors_size 5  // if no sensors, then set to 0
+itu_service_t *sensors[5]; // if no sensors, then set to 1
 static void registerSensors(void){		
 	sensors[0] = getHumiditySensorSI7021();
 	sensors[1] = getTempSensorSI7021();
 	sensors[2] = getLightSensorTSL2561();
 	sensors[3] = getTempSensorTmp36();
+	sensors[4] = getMotionSensor();
 }
 
 

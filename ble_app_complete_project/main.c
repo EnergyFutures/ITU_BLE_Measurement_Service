@@ -289,7 +289,7 @@ static void its_broadcast_encode_and_set(void * p_itu_service_struct, uint8_t ty
 		
 		if(storage_struct.current_block > BLOCK_COUNT_PROCENT && buffer_full != 1){
 			buffer_full = 1;
-			sd_ble_gap_tx_power_set(connectable_transmit_power_db);
+			sd_ble_gap_tx_power_set(CONNECTABLE_TRANSMIT_POWER_DB);
 		}
 	
 		//MISC (xxxxyyyz) = xxxx for battery procentage in increments of 10, yyy for service type (sensor or actuator or mix), z for buffer full
@@ -368,7 +368,7 @@ static void clear_cache_sche2(void *data, uint16_t size){
 static void clear_cache(void){
 		app_sched_event_put(NULL, 0, clear_cache_sche1);			
 		app_sched_event_put(NULL, 0, clear_cache_sche2);
-		sd_ble_gap_tx_power_set(nonconnectable_transmit_power_db);
+		sd_ble_gap_tx_power_set(NONCONNECTABLE_TRANSMIT_POWER_DB);
 		buffer_full = false;
 }
 
@@ -522,6 +522,7 @@ static void application_timers_start(void)
 {
 		for(uint8_t i = 0; i < total_services_size; i++){
 				all_services[i]->timer_start();
+				nrf_delay_ms(50);
 		}		
 }
 
@@ -727,6 +728,35 @@ static void registerServices(void){
 	}
 }
 
+void gpiote_event_handler (uint32_t event_pins_low_to_high, uint32_t event_pins_high_to_low)
+{
+	for(uint8_t i = 0; i < total_services_size; i++){
+		if(all_services[i]->needs_gpiote){
+			all_services[i]->on_gpiote_event(&event_pins_low_to_high,&event_pins_high_to_low);
+		}
+	}
+}
+
+static void init_gpiote(){
+	uint32_t low_to_high_bitmask = 0;
+	uint32_t high_to_low_bitmask = 0;
+	app_gpiote_user_id_t m_example_user_id;
+	for(uint8_t i = 0; i < total_services_size; i++){
+		if(all_services[i]->needs_gpiote){
+			all_services[i]->gpiote_init(&low_to_high_bitmask,&high_to_low_bitmask);
+		}
+	}
+	
+	if(low_to_high_bitmask != 0 || high_to_low_bitmask != 0){
+		APP_GPIOTE_INIT(1);
+		uint32_t retval;
+		retval = app_gpiote_user_register(&m_example_user_id,low_to_high_bitmask,high_to_low_bitmask,gpiote_event_handler);
+		APP_ERROR_CHECK(retval);
+		retval = app_gpiote_user_enable(m_example_user_id);
+		APP_ERROR_CHECK(retval);
+	}
+}
+
 int main(void)
 {
 		
@@ -743,9 +773,11 @@ int main(void)
 		timers_init();
     adc_first_time_init();
 		init_sensors_and_actuators();
+		
     // Start execution.
 		application_timers_start();				
     advertising_start();	
+		init_gpiote();
     for (;;)
     {
 				app_sched_execute();

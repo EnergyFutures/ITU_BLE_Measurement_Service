@@ -21,7 +21,10 @@ static itu_service_t window_actuator =
 	.service = &ias_struct,
 	.service_type = 1,
 	.needs_adc = false,
-	.adc_done = NULL
+	.adc_done = NULL,
+	.needs_gpiote = false,
+	.gpiote_init = NULL,
+	.on_gpiote_event = NULL
 };
 
 itu_service_t * get_window_actuator(void){

@@ -25,7 +25,10 @@ static itu_service_t light_sensor1 ={.timer_init = sensor_timer_init,
 																		.service = &iss_struct,
 																		.service_type = 0,
 																		.needs_adc = false,
-																		.adc_done = NULL
+																		.adc_done = NULL,
+																		.needs_gpiote = false,
+																		.gpiote_init = NULL,
+																		.on_gpiote_event = NULL
 																		};
 
 itu_service_t * getLightSensorTSL2561(void){

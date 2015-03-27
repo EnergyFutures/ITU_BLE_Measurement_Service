@@ -20,6 +20,9 @@ static itu_service_t temp_sensor1 ={.timer_init = sensor_timer_init,
 																		.service_type = 0,
 																		.needs_adc = true,
 																		.adc_done = adc_done,
+																		.needs_gpiote = false,
+																		.gpiote_init = NULL,
+																		.on_gpiote_event = NULL
 																		};
 
 itu_service_t * getTempSensorTmp36(void){

@@ -574,6 +574,11 @@
               <FilePath>..\window_actuator.h</FilePath>
             </File>
             <File>
+              <FileName>window_actuator_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\window_actuator_config.h</FilePath>
+            </File>
+            <File>
               <FileName>ac_actuator.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\ac_actuator.c</FilePath>
@@ -587,11 +592,6 @@
               <FileName>ac_actuator_config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\ac_actuator_config.h</FilePath>
-            </File>
-            <File>
-              <FileName>window_actuator_config.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\window_actuator_config.h</FilePath>
             </File>
             <File>
               <FileName>HT_sensor_SI7021.c</FileName>
@@ -637,6 +637,21 @@
               <FileName>temp_sensor_tmp36_config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\temp_sensor_tmp36_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>motion_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\motion_sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>motion_sensor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\motion_sensor.h</FilePath>
+            </File>
+            <File>
+              <FileName>motion_sensor_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\motion_sensor_config.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -1293,6 +1308,11 @@
               <FilePath>..\window_actuator.h</FilePath>
             </File>
             <File>
+              <FileName>window_actuator_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\window_actuator_config.h</FilePath>
+            </File>
+            <File>
               <FileName>ac_actuator.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\ac_actuator.c</FilePath>
@@ -1306,11 +1326,6 @@
               <FileName>ac_actuator_config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\ac_actuator_config.h</FilePath>
-            </File>
-            <File>
-              <FileName>window_actuator_config.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\window_actuator_config.h</FilePath>
             </File>
             <File>
               <FileName>HT_sensor_SI7021.c</FileName>
@@ -1356,6 +1371,21 @@
               <FileName>temp_sensor_tmp36_config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\temp_sensor_tmp36_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>motion_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\motion_sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>motion_sensor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\motion_sensor.h</FilePath>
+            </File>
+            <File>
+              <FileName>motion_sensor_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\motion_sensor_config.h</FilePath>
             </File>
           </Files>
         </Group>

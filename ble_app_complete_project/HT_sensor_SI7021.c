@@ -27,7 +27,10 @@ static itu_service_t humidity_sensor ={.timer_init = sensor_timer_init,
 																		.service = &iss_struct_h,
 																		.service_type = 0,
 																		.needs_adc = false,
-																		.adc_done = NULL
+																		.adc_done = NULL,
+																		.needs_gpiote = false,
+																		.gpiote_init = NULL,
+																		.on_gpiote_event = NULL
 																		};
 static itu_service_t temp_sensor ={.timer_init = sensor_timer_init,
 																		.timer_start = sensor_timer_start,
@@ -36,7 +39,10 @@ static itu_service_t temp_sensor ={.timer_init = sensor_timer_init,
 																		.service = &iss_struct_t,
 																		.service_type = 0,
 																		.needs_adc = false,
-																		.adc_done = NULL
+																		.adc_done = NULL,
+																		.needs_gpiote = false,
+																		.gpiote_init = NULL,
+																		.on_gpiote_event = NULL
 																		};
 
 itu_service_t * getHumiditySensorSI7021(void){
