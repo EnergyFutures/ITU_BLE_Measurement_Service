@@ -11,9 +11,10 @@
 
 static uint32_t adc_result;
 static iss_t iss_struct; 
-static app_timer_id_t one_shoot_timer;
+//static app_timer_id_t one_shoot_timer;
 static itu_service_t temp_sensor1 ={.timer_init = sensor_timer_init,
 																		.timer_start = sensor_timer_start,
+																		.timer_stop = sensor_timer_stop,
 																		.init = init,
 																		.ble_evt = sensor_ble_evt,
 																		.service = &iss_struct,
@@ -29,74 +30,67 @@ itu_service_t * getTempSensorTmp36(void){
 	return &temp_sensor1;
 }
 
-
-
-
 static void updateTempValue(void *data, uint16_t size){
 	UNUSED_PARAMETER(data);
 	UNUSED_PARAMETER(size);
-	// (result * (2/3 * 1,2vref) / 1024 (10 bit res))..  we multiply with 100 to avoid float.. the result is already multiplied with 10... we we multiply with 10
+	// (result * (3/2 * 1,2vref) / 1024 (10 bit res))..  we multiply with 100 to avoid float.. the result is already multiplied with 10... we multiply with 10
 	int32_t temp_value = (((adc_result * 1800)/1024) - 500 ) * 10; 
-	update_iss_measurement(&iss_struct, &temp_value);
+	uint32_t err_code;	
+	err_code = update_iss_measurement(&iss_struct, &temp_value);
+	APP_ERROR_CHECK(err_code);
+	err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), NULL);
+	APP_ERROR_CHECK(err_code);
 }
 
 static bool adc_done(uint8_t pin){
 	if(pin == TMP36_ADC_PIN){		
 		adc_result = NRF_ADC->RESULT;		
 		nrf_gpio_pin_clear(TMP36_VCC_PIN);
-		app_sched_event_put(NULL, 0, updateTempValue);
+		uint32_t err_code;	
+		err_code = app_sched_event_put(NULL, 0, updateTempValue);
+		APP_ERROR_CHECK(err_code);
 		return true;
 	}	
 	return false;
 }
 
-static void temp_adc_sampling_set_pin_sche(void *data, uint16_t size)
+static void temp_adc_sampling(void * p_context)
 {        
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(size);
-		nrf_gpio_pin_set(TMP36_VCC_PIN);	
-		app_timer_start(one_shoot_timer, APP_TIMER_TICKS(150, APP_TIMER_PRESCALER), NULL);
-}
-
-static void temp_adc_sampling_start_sche(void *data, uint16_t size)
-{        
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(size);
-	
-	while(NRF_ADC->BUSY){;}
-	adc_init(TMP36_ADC_PIN,ADC_CONFIG_INPSEL_AnalogInputTwoThirdsPrescaling);
-	NRF_ADC->TASKS_START = 1;							//Start ADC sampling
-}
-
-static void temp_adc_sampling_start(void * p_context)
-{        
-	UNUSED_PARAMETER(p_context);	
-	app_sched_event_put(NULL, 0, temp_adc_sampling_start_sche);
-}
-
-
-static void temp_adc_sampling_set_pin(void * p_context)
-{        
-	UNUSED_PARAMETER(p_context);	
-	if(do_measurements)
-	app_sched_event_put(NULL, 0, temp_adc_sampling_set_pin_sche);
+	UNUSED_PARAMETER(p_context);
+	uint32_t err_code;	
+	static bool set_pin = false;
+	if(do_measurements){
+		set_pin = !set_pin;
+		if(set_pin){
+			nrf_gpio_pin_set(TMP36_VCC_PIN);	
+			err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(150, APP_TIMER_PRESCALER), NULL);
+			APP_ERROR_CHECK(err_code);
+		}else{
+			adc_init(TMP36_ADC_PIN,ADC_CONFIG_INPSEL_AnalogInputTwoThirdsPrescaling);
+		}	
+	}
 }
 
 static void sensor_timer_init(void)
 {
 		uint32_t err_code;	
-		err_code = app_timer_create(&iss_struct.meas_timer,APP_TIMER_MODE_REPEATED,temp_adc_sampling_set_pin);
-		APP_ERROR_CHECK(err_code);
-		err_code = app_timer_create(&one_shoot_timer,APP_TIMER_MODE_SINGLE_SHOT,temp_adc_sampling_start);
+		err_code = app_timer_create(&iss_struct.meas_timer,APP_TIMER_MODE_SINGLE_SHOT,temp_adc_sampling);
 		APP_ERROR_CHECK(err_code);
 }
 
 
-static void sensor_timer_start(void)
+static void sensor_timer_start(uint16_t offset)
 {
-		uint32_t err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
+		uint32_t err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(offset ? offset : iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
 		APP_ERROR_CHECK(err_code);
 		iss_struct.timer_running = true;
+}
+
+static void sensor_timer_stop(void)
+{
+		uint32_t err_code = app_timer_stop(iss_struct.meas_timer);
+		APP_ERROR_CHECK(err_code);
+		iss_struct.timer_running = false;
 }
 
 
@@ -112,6 +106,7 @@ static void update_measurement_samp_freq(){
 			APP_ERROR_CHECK(err_code);
 			err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
 			APP_ERROR_CHECK(err_code);
+		  advertising_init();
 	 }   
 }
 

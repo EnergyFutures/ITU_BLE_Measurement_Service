@@ -108,7 +108,6 @@ bool twi_master_write(uint8_t address, uint8_t *tx_data, uint8_t tx_data_length,
     while(cfg->twi_operation_complete == false);
 		active_config =0;
     return cfg->twi_ack_received;
-
 }
 
 bool twi_master_write_read(uint8_t address, uint8_t *tx_data, uint8_t tx_data_length, uint8_t *rx_data, uint8_t rx_data_length,twi_config_t *cfg)
@@ -180,7 +179,7 @@ bool twi_master_read(uint8_t address, uint8_t *rx_data, uint8_t rx_data_length,t
  * @retval false Bus is stuck.
  * @retval true Bus is clear.
  */
-static bool twi_master_clear_bus(twi_config_t *cfg)
+static bool twi_master_clear_bus(twi_init_config_t *cfg)
 {
     bool bus_clear;
 
@@ -215,7 +214,7 @@ static bool twi_master_clear_bus(twi_config_t *cfg)
     return bus_clear;
 }
 
-bool twi_master_init(twi_config_t *cfg)
+bool twi_master_init(twi_init_config_t *init_cfg,twi_config_t *cfg)
 {
     cfg->twi_operation_complete = true;
     cfg->twi_ack_received = true;
@@ -225,14 +224,14 @@ bool twi_master_init(twi_config_t *cfg)
        master when the system is in OFF mode, and when the TWI master is 
        disabled, these pins must be configured in the GPIO peripheral.
     */ 
-    NRF_GPIO->PIN_CNF[cfg->twi_pinselect_scl] = 
+    NRF_GPIO->PIN_CNF[init_cfg->twi_pinselect_scl] = 
         (GPIO_PIN_CNF_SENSE_Disabled << GPIO_PIN_CNF_SENSE_Pos)
       | (GPIO_PIN_CNF_DRIVE_S0D1     << GPIO_PIN_CNF_DRIVE_Pos)
       | (GPIO_PIN_CNF_PULL_Pullup    << GPIO_PIN_CNF_PULL_Pos)
       | (GPIO_PIN_CNF_INPUT_Connect  << GPIO_PIN_CNF_INPUT_Pos)
       | (GPIO_PIN_CNF_DIR_Input      << GPIO_PIN_CNF_DIR_Pos);    
 
-    NRF_GPIO->PIN_CNF[cfg->twi_pinselect_sda] = 
+    NRF_GPIO->PIN_CNF[init_cfg->twi_pinselect_sda] = 
         (GPIO_PIN_CNF_SENSE_Disabled << GPIO_PIN_CNF_SENSE_Pos)
       | (GPIO_PIN_CNF_DRIVE_S0D1     << GPIO_PIN_CNF_DRIVE_Pos)
       | (GPIO_PIN_CNF_PULL_Pullup    << GPIO_PIN_CNF_PULL_Pos)
@@ -241,10 +240,10 @@ bool twi_master_init(twi_config_t *cfg)
     
     cfg->twi->EVENTS_RXDREADY = 0;
     cfg->twi->EVENTS_TXDSENT = 0;
-    cfg->twi->PSELSCL = cfg->twi_pinselect_scl;
-    cfg->twi->PSELSDA = cfg->twi_pinselect_sda;
+    cfg->twi->PSELSCL = init_cfg->twi_pinselect_scl;
+    cfg->twi->PSELSDA = init_cfg->twi_pinselect_sda;
     
-    switch(cfg->frequency)
+    switch(init_cfg->frequency)
     {
         case TWI_FREQ_100KHZ:
             cfg->twi->FREQUENCY = TWI_FREQUENCY_FREQUENCY_K100 << TWI_FREQUENCY_FREQUENCY_Pos;
@@ -255,9 +254,9 @@ bool twi_master_init(twi_config_t *cfg)
     }
     sd_ppi_channel_assign(cfg->twi_ppi_ch, &cfg->twi->EVENTS_BB, &cfg->twi->TASKS_SUSPEND);
     sd_ppi_channel_enable_clr(1 << cfg->twi_ppi_ch);
-    sd_nvic_SetPriority(cfg->twi_interrupt_no, TWI_IRQ_PRIORITY_SD);
-    sd_nvic_EnableIRQ(cfg->twi_interrupt_no);
+    sd_nvic_SetPriority(init_cfg->twi_interrupt_no, TWI_IRQ_PRIORITY_SD);
+    sd_nvic_EnableIRQ(init_cfg->twi_interrupt_no);
     cfg->twi->INTENSET = TWI_INTENSET_TXDSENT_Msk | TWI_INTENSET_STOPPED_Msk | TWI_INTENSET_ERROR_Msk | TWI_INTENSET_RXDREADY_Msk;
     cfg->twi->ENABLE = TWI_ENABLE_ENABLE_Enabled << TWI_ENABLE_ENABLE_Pos;
-    return twi_master_clear_bus(cfg);
+    return twi_master_clear_bus(init_cfg);
 }

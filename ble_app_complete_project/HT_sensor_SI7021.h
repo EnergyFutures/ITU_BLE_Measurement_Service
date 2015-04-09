@@ -2,7 +2,6 @@
 #define ITU_HT_SENSOR_SI7021_H__
 #include <stdint.h>
 #include <itu_service.h>
-#include "main.h"
 #include "sensor_service.h"
 
 #define SI7021_MEASURE_RH_COM 0xE5
@@ -15,7 +14,8 @@ static void twi_ht_start_measuring(void * p_context);
 static void twi_ht_read_measurement(void * p_context);
 static void sensor_timer_init(void);
 static void services_init(void);
-static void sensor_timer_start(void);
+static void sensor_timer_start(uint16_t offset);
+static void sensor_timer_stop(void);
 static void sensor_ble_evt(ble_evt_t * p_ble_evt);
 static void init(void);
 itu_service_t * getHumiditySensorSI7021(void);

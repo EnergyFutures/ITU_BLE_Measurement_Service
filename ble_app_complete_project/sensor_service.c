@@ -34,9 +34,6 @@
 #define ITS_MEAS_FLAG_SAMP_FREQ_BIT_PLACEMENT         	4             /**< Sampling Frequency placement in header */
 #define ITS_MEAS_FLAG_OVERRIDE_BIT_PLACEMENT          	7             /**< When configuation is received by the client, this bit indicate whether we are setting the presentation or overriding values */
 
-//Extract one bit from a number
-#define BIT_VALUE(n,bv) ((n >> bv) & 1)
-
 /**@brief Function for handling the Connect event.
  *
  * @param[in]   p_iss       ITU Sensor Service structure.
@@ -73,6 +70,7 @@ static uint8_t its_conf_encode(iss_t * p_iss, uint8_t * p_encoded_buffer)
 		uint8_t pres_flags = 0;
     uint8_t len   = 1;
 		
+	/*
     // Sequence number field
     if (p_iss->space_time_present)
     {
@@ -101,7 +99,13 @@ static uint8_t its_conf_encode(iss_t * p_iss, uint8_t * p_encoded_buffer)
     if (p_iss->samp_freq_present)
     {
         pres_flags |= ITS_MEAS_FLAG_SAMP_FREQ_BIT;
-    }
+    }*/
+		
+		pres_flags |= ITS_MEAS_FLAG_SPACE_TIME_BIT;
+		pres_flags |= ITS_MEAS_FLAG_UNIT_BIT;
+		pres_flags |= ITS_MEAS_FLAG_TYPE_MAKE_BIT;
+		pres_flags |= ITS_MEAS_FLAG_ID_BIT;
+		pres_flags |= ITS_MEAS_FLAG_SAMP_FREQ_BIT;
 
     // Presentation Flag field
     p_encoded_buffer[0] = pres_flags;		
@@ -129,9 +133,9 @@ static uint8_t its_conf_encode(iss_t * p_iss, uint8_t * p_encoded_buffer)
 static void its_conf_decode(iss_t * p_iss,uint16_t data_length, uint8_t * data)
 {
 		if(data_length > 0){		
-			p_iss->gatt_db_needs_cleaning = true;
+			//p_iss->gatt_db_needs_cleaning = true;
 			uint8_t data_bits = data[0];
-			if(BIT_VALUE(data_bits,ITS_MEAS_FLAG_OVERRIDE_BIT_PLACEMENT)){
+			//if(BIT_VALUE(data_bits,ITS_MEAS_FLAG_OVERRIDE_BIT_PLACEMENT)){
 					//OVERRIDE.. Client wants to set new values
 					if(data_length > 1){
 						
@@ -171,7 +175,7 @@ static void its_conf_decode(iss_t * p_iss,uint16_t data_length, uint8_t * data)
 								p_iss->p_update_samp_freq();
 						}
 					}					
-			}else{
+			/*}else{
 				//set presentation			
 				
 				// SET Space + Time
@@ -197,7 +201,7 @@ static void its_conf_decode(iss_t * p_iss,uint16_t data_length, uint8_t * data)
 			sd_ble_gatts_value_set(p_iss->meas_conf_handles.value_handle,
 																			0,
 																			&data_len,
-																			data_buf);
+																			data_buf);*/
 		}
 }
 
@@ -337,7 +341,7 @@ static uint32_t add_conf_char(iss_t * p_iss)
     
 		//BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_ITU_MEASUREMENT_VALUE_CHAR);
 		//Expanded the above macro to the code below for readability
-    ble_uuid.type = BLE_UUID_TYPE_BLE; \
+    ble_uuid.type = BLE_UUID_TYPE_BLE;
     ble_uuid.uuid = BLE_UUID_ITU_MEASUREMENT_CONFIG_CHAR;
 		
 		
@@ -376,7 +380,7 @@ static uint32_t add_conf_char(iss_t * p_iss)
  *
  * @return      NRF_SUCCESS on success, otherwise an error code.
  */
-
+/*
 static uint32_t add_meas_char(iss_t * p_iss)
 {
     uint32_t            err_code;
@@ -410,7 +414,7 @@ static uint32_t add_meas_char(iss_t * p_iss)
     
 		//BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_ITU_MEASUREMENT_VALUE_CHAR);
 		//Expanded the above macro to the code below for readability
-    ble_uuid.type = BLE_UUID_TYPE_BLE; \
+    ble_uuid.type = BLE_UUID_TYPE_BLE;
     ble_uuid.uuid = BLE_UUID_ITU_MEASUREMENT_VALUE_CHAR;
 		
 		
@@ -442,7 +446,7 @@ static uint32_t add_meas_char(iss_t * p_iss)
     
     // Add config characteristic
     return add_conf_char(p_iss);
-}
+}*/
 
 
 uint32_t iss_initialize(iss_t * p_iss)
@@ -452,11 +456,11 @@ uint32_t iss_initialize(iss_t * p_iss)
 		
 		//Initialize service structure
     p_iss->conn_handle     	= BLE_CONN_HANDLE_INVALID;
-		p_iss->is_sensor = true;
 		p_iss->last_measurement = 0;
     
     // Add service
-    BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_ITU_MEASUREMENT_SERVICE);
+		ble_uuid.type = BLE_UUID_TYPE_BLE;
+    ble_uuid.uuid = BLE_UUID_ITU_MEASUREMENT_SERVICE;
 
     err_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &ble_uuid, &p_iss->service_handle);
     if (err_code != NRF_SUCCESS)
@@ -464,8 +468,8 @@ uint32_t iss_initialize(iss_t * p_iss)
         return err_code;
     }
     
-    // Add measurement characteristic
-    return add_meas_char(p_iss);
+    // Add config characteristic
+    return add_conf_char(p_iss);
 }
 
 
@@ -476,7 +480,7 @@ uint32_t update_iss_measurement(iss_t * p_iss, int32_t * p_new_meas)
 		uint16_t len = MAX_HTM_LEN;
 	
 		memset(encoded_measurement, 0, sizeof(encoded_measurement));
-		if(p_iss->gatt_db_needs_cleaning){
+		/*if(p_iss->gatt_db_needs_cleaning){
 			p_iss->gatt_db_needs_cleaning = false;
 			// Update database with all zeros... to remove old values
 			err_code = sd_ble_gatts_value_set(p_iss->meas_val_handles.value_handle,
@@ -487,14 +491,14 @@ uint32_t update_iss_measurement(iss_t * p_iss, int32_t * p_new_meas)
 			{
 					return err_code;
 			}
-		}
+		}*/
 		len = iss_measurement_encode(p_iss,p_new_meas, encoded_measurement, &(p_iss ->last_measurement));
 		
 		// Update database with the new measurement
-		err_code = sd_ble_gatts_value_set(p_iss->meas_val_handles.value_handle,
+		/*err_code = sd_ble_gatts_value_set(p_iss->meas_val_handles.value_handle,
 																			0,
 																			&len,
-																			encoded_measurement);
+																			encoded_measurement);*/
 		if (err_code != NRF_SUCCESS)
 		{
 				return err_code;

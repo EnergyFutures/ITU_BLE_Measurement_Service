@@ -49,9 +49,8 @@ typedef struct ias
     uint16_t                     service_handle;               
 		ble_gatts_char_handles_t     actuator_handles;      			 
     uint16_t                     conn_handle;  
-		void (*p_update_status)(struct ias *);									 
-		bool												 is_sensor;
-		its_measurement_location_t   coord;     
+		void (*p_update_status)(struct ias *);	
+		uint8_t   coord;     
 		uint8_t                     type;
 		uint8_t                     make;
 		uint8_t 										value;

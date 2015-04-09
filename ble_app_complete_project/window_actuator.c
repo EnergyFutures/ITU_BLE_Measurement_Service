@@ -8,14 +8,14 @@
 #include "nrf_gpio.h"
 #include "nrf_soc.h"
 #include <math.h>
-#include "itu_service.h"
+#include "nrf_delay.h"
 
 static ias_t ias_struct; 
-static app_timer_id_t one_shoot_timer;
 static uint8_t pin = WINDOW_STOP_PIN;
 static itu_service_t window_actuator =
  {.timer_init = actuator_timer_init,
 	.timer_start = actuator_timer_start,
+	 .timer_stop = actuator_timer_stop,
 	.init = init,
 	.ble_evt = actuator_ble_evt,
 	.service = &ias_struct,
@@ -31,22 +31,11 @@ itu_service_t * get_window_actuator(void){
 	return &window_actuator;
 }
 
+static void actuator_timer_init(void){}
 
-static void clear_pin(void * p_context)
-{   
-	//use the context pointer for a direct value of the pin to clear
-	UNUSED_PARAMETER(p_context);
-	nrf_gpio_pin_clear(pin);
-}
+static void actuator_timer_start(uint16_t offset){}
 
-static void actuator_timer_init(void){
-		uint32_t err_code;	
-		err_code = app_timer_create(&one_shoot_timer,APP_TIMER_MODE_SINGLE_SHOT,clear_pin);
-		APP_ERROR_CHECK(err_code);
-}
-
-static void actuator_timer_start(void){}
-
+static void actuator_timer_stop(void){}
 
 static void actuator_ble_evt(ble_evt_t * p_ble_evt)
 {
@@ -64,9 +53,8 @@ static void update_actuator(ias_t * ias_struct){
 		nrf_gpio_pin_set(WINDOW_STOP_PIN);
 		pin = WINDOW_STOP_PIN;
 	}
-	
-	uint32_t err_code = app_timer_start(one_shoot_timer, APP_TIMER_TICKS(100, APP_TIMER_PRESCALER),NULL);
-	APP_ERROR_CHECK(err_code);
+	nrf_delay_ms(100);
+	nrf_gpio_pin_clear(pin);
 }
 	
 static void init(void){

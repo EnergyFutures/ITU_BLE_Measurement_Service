@@ -2,7 +2,6 @@
 #define ITU_light_sensor_TSL2561_H__
 #include <stdint.h>
 #include <itu_service.h>
-#include "main.h"
 #include "sensor_service.h"
 
 #define TSL2561_VISIBLE 2                   // channel 0 - channel 1
@@ -93,7 +92,8 @@ static void twi_light_start_measuring(void * p_context);
 static void twi_light_read_measurement(void * p_context);
 static void sensor_timer_init(void);
 static void services_init(void);
-static void sensor_timer_start(void);
+static void sensor_timer_start(uint16_t offset);
+static void sensor_timer_stop(void);
 static void sensor_ble_evt(ble_evt_t * p_ble_evt);
 static void init(void);
 itu_service_t * getLightSensorTSL2561(void);

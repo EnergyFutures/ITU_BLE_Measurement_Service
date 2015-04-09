@@ -26,15 +26,19 @@ enum {TWI_FREQ_100KHZ = 0, TWI_FREQ_400KHZ = 1};
 
 typedef struct
 {
-  uint8_t twi_pinselect_scl;
-  uint8_t twi_pinselect_sda;
   uint8_t twi_ppi_ch;  
-	IRQn_Type twi_interrupt_no;
 	NRF_TWI_Type *twi;
 	bool twi_operation_complete;
 	bool twi_ack_received;
-	uint8_t frequency     : 1;
 }twi_config_t;
+
+typedef struct
+{
+  uint8_t twi_pinselect_scl;
+  uint8_t twi_pinselect_sda;
+	IRQn_Type twi_interrupt_no;
+	uint8_t frequency     : 1;
+}twi_init_config_t;
 
 /** @file
 * @brief Software controlled TWI Master driver.
@@ -85,7 +89,7 @@ typedef struct
  * @retval true TWI bus is clear for transfers.
  * @retval false TWI bus is stuck.
  */
-bool twi_master_init(twi_config_t *cfg);
+bool twi_master_init(twi_init_config_t *init_cfg,twi_config_t *cfg);
 
 bool twi_master_write(uint8_t address, uint8_t *data, uint8_t data_length,twi_config_t *cfg);
 

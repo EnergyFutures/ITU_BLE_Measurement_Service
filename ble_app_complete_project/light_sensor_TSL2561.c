@@ -9,17 +9,11 @@
 #include "nrf_gpio.h"
 #include "itu_service.h"
 
-
-
-static uint8_t twi_data_tx[2] = {0,0};
-static uint8_t twi_data_rx[2] = {0,0};
 static twi_config_t my_twi_config;
-static uint8_t light_twi_command = TSL2561_COMMAND_BIT | TSL2561_CLEAR_BIT | TSL2561_WORD_BIT;
-static app_timer_id_t twi_timer;
 static iss_t iss_struct; 
-static bool startup = false;
 static itu_service_t light_sensor1 ={.timer_init = sensor_timer_init,
 																		.timer_start = sensor_timer_start,
+																		.timer_stop = sensor_timer_stop,
 																		.init = init,
 																		.ble_evt = sensor_ble_evt,
 																		.service = &iss_struct,
@@ -35,74 +29,80 @@ itu_service_t * getLightSensorTSL2561(void){
 	return &light_sensor1;
 }
 
-void twi_light_start_measuring_sche(void *data, uint16_t size){
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(size);
-		//TURN ON THE TRANSISTOR AND WAIT FOR IT TO STABILIZE
-		nrf_gpio_pin_set(TSL2561_BASE_PIN);
-		app_timer_start(twi_timer, APP_TIMER_TICKS(50, APP_TIMER_PRESCALER), NULL);
-}
 
-static void twi_light_start_measuring(void * p_context){
+static void twi_light_sampling(void * p_context){
 	UNUSED_PARAMETER(p_context);	
-	if(do_measurements)
-	app_sched_event_put(NULL, 0, twi_light_start_measuring_sche);
+	static bool startup = true;
+	static bool set_pin = true;
+	uint32_t err_code;
+	if(do_measurements){
+		if(set_pin){
+			set_pin = false;
+			//TURN ON THE TRANSISTOR AND WAIT FOR IT TO STABILIZE
+			nrf_gpio_pin_set(TSL2561_BASE_PIN);
+			err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(50, APP_TIMER_PRESCALER), NULL);
+			APP_ERROR_CHECK(err_code);
+		}else{
+			uint8_t twi_data_tx[2] = {0,0};
+			uint8_t twi_data_rx[2] = {0,0};
+			uint8_t light_twi_command = TSL2561_COMMAND_BIT | TSL2561_CLEAR_BIT | TSL2561_WORD_BIT;
+			if(startup){
+				// POWER ON and wait 450 ms
+				startup = false;
+				twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CONTROL;
+				twi_data_tx[1] = TSL2561_CONTROL_POWERON;
+				err_code = !twi_master_write(light_sens_adr, twi_data_tx, 2,&my_twi_config);
+				APP_ERROR_CHECK(err_code);
+				err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(450, APP_TIMER_PRESCALER), NULL);
+				APP_ERROR_CHECK(err_code);
+			}else{
+				uint16_t ch0,ch1 = 0;
+				twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CHAN0_LOW;	
+				err_code = !twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2,&my_twi_config);
+				APP_ERROR_CHECK(err_code);
+				ch0 = twi_data_rx[0];
+				ch0 = ch0 | (((uint16_t)(twi_data_rx[1]))<<8);
+				
+				twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CHAN1_LOW;
+				err_code = !twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2,&my_twi_config);
+				APP_ERROR_CHECK(err_code);
+				ch1 = twi_data_rx[0];
+				ch1 = ch1 | (((uint16_t)(twi_data_rx[1]))<<8);
+				
+				nrf_gpio_pin_clear(TSL2561_BASE_PIN);
+
+				int32_t lux = calc_lux(ch0,ch1);
+				err_code = update_iss_measurement(&iss_struct, &lux);
+				APP_ERROR_CHECK(err_code);
+				startup = true;
+				set_pin = true;
+				err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
+				APP_ERROR_CHECK(err_code);
+			}	
+		}		
+	}
 }
-
-
-void twi_light_read_measurement_sche(void *data, uint16_t size){
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(size);
-	startup = !startup;
-	if(startup){
-		// POWER ON and wait 450 ms
-		twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CONTROL;
-		twi_data_tx[1] = TSL2561_CONTROL_POWERON;
-		twi_master_write(light_sens_adr, twi_data_tx, 2,&my_twi_config);
-		app_timer_start(twi_timer, APP_TIMER_TICKS(450, APP_TIMER_PRESCALER), NULL);
-	}else{
-		uint16_t ch0,ch1 = 0;
-		twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CHAN0_LOW;	
-		twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2,&my_twi_config);
-		ch0 = twi_data_rx[0];
-		ch0 = ch0 | (((uint16_t)(twi_data_rx[1]))<<8);
-		
-		twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CHAN1_LOW;
-		twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2,&my_twi_config);
-		ch1 = twi_data_rx[0];
-		ch1 = ch1 | (((uint16_t)(twi_data_rx[1]))<<8);
-		
-		nrf_gpio_pin_clear(TSL2561_BASE_PIN);
-		
-		int32_t lux = calc_lux(ch0,ch1) * 100;
-		update_iss_measurement(&iss_struct, &lux);
-	}	
-}
-
-
-static void twi_light_read_measurement(void * p_context){
-	UNUSED_PARAMETER(p_context);	
-	app_sched_event_put(NULL, 0, twi_light_read_measurement_sche);
-}
-
 
 static void sensor_timer_init(void)
 {
 		uint32_t err_code;	
-		err_code = app_timer_create(&iss_struct.meas_timer,APP_TIMER_MODE_REPEATED,twi_light_start_measuring);
-		APP_ERROR_CHECK(err_code);
-		err_code = app_timer_create(&twi_timer,APP_TIMER_MODE_SINGLE_SHOT,twi_light_read_measurement);
+		err_code = app_timer_create(&iss_struct.meas_timer,APP_TIMER_MODE_SINGLE_SHOT,twi_light_sampling);
 		APP_ERROR_CHECK(err_code);
 }
 
-
-static void sensor_timer_start(void)
+static void sensor_timer_start(uint16_t offset)
 {
-		uint32_t err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
+		uint32_t err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(offset ? offset : iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
 		APP_ERROR_CHECK(err_code);
 		iss_struct.timer_running = true;
 }
 
+static void sensor_timer_stop(void)
+{
+		uint32_t err_code = app_timer_stop(iss_struct.meas_timer);
+		APP_ERROR_CHECK(err_code);
+		iss_struct.timer_running = false;
+}
 
 static void sensor_ble_evt(ble_evt_t * p_ble_evt)
 {
@@ -116,17 +116,20 @@ static void update_measurement_samp_freq(){
 			APP_ERROR_CHECK(err_code);
 			err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
 			APP_ERROR_CHECK(err_code);
+			advertising_init();
 	 }   
 }
 
 static void init(void){
-	my_twi_config.twi_pinselect_scl = light_TWI_SCL;
-	my_twi_config.twi_pinselect_sda = light_TWI_SDA;
 	my_twi_config.twi_ppi_ch = 0;
-	my_twi_config.twi_interrupt_no = SPI0_TWI0_IRQn;
   my_twi_config.twi = NRF_TWI0;
-	my_twi_config.frequency     = TWI_FREQ_400KHZ;
-	if(!twi_master_init(&my_twi_config))
+	
+	twi_init_config_t init_config;
+	init_config.frequency = TWI_FREQ_400KHZ;
+	init_config.twi_pinselect_scl = light_TWI_SCL;
+	init_config.twi_pinselect_sda = light_TWI_SDA;
+	init_config.twi_interrupt_no = SPI0_TWI0_IRQn;
+	if(!twi_master_init(&init_config,&my_twi_config))
 	{
 			APP_ERROR_CHECK(666);
 	}
@@ -142,6 +145,7 @@ static void init(void){
 	iss_struct.coord = TSL2561_COORDINATE;
 	iss_struct.type = BLE_UUID_ITU_SENSOR_TYPE_LIGHT;
 	iss_struct.make = BLE_UUID_ITU_SENSOR_MAKE_TSL2561;
+	iss_struct.IEEE_exponent = 0;
 }
 
 
@@ -192,33 +196,3 @@ static uint32_t calc_lux(uint16_t ch0, uint16_t ch1)
 	// Signal I2C had no errors
 	return lux;
 }
-
-/*
-static void twi_light_read_measurement(void * p_context){
-	UNUSED_PARAMETER(p_context);
-	
-	if(!is_twi_completed()){
-		app_timer_start(twi_timer, APP_TIMER_TICKS(1, APP_TIMER_PRESCALER), NULL);
-		return;
-	}
-	if(measurement_step == 1){
-		twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CHAN0_LOW;	
-		twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2);
-		measurement_step = 2;
-		app_timer_start(twi_timer, APP_TIMER_TICKS(1, APP_TIMER_PRESCALER), NULL);
-	}else if(measurement_step == 2){
-		ch0 = twi_data_rx[0];
-		ch0 = ch0 | (((uint16_t)(twi_data_rx[1]))<<8);
-		twi_data_tx[0] = light_twi_command | TSL2561_REGISTER_CHAN1_LOW;
-		twi_master_write_read(light_sens_adr, twi_data_tx, 1, twi_data_rx, 2);
-		measurement_step = 3;
-		app_timer_start(twi_timer, APP_TIMER_TICKS(1, APP_TIMER_PRESCALER), NULL);
-	}else{
-		ch1 = twi_data_rx[0];
-		ch1 = ch1 | (((uint16_t)(twi_data_rx[1]))<<8);
-		app_sched_event_put(NULL, 0, updateLightValue);
-		measurement_step = 1;
-	}	
-}
-
-*/

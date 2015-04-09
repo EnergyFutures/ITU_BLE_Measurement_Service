@@ -51,27 +51,27 @@ typedef struct iss
     ble_gatts_char_handles_t     meas_val_handles;      			 /**< Handles related to the measurement value characteristic. */
 		ble_gatts_char_handles_t     meas_conf_handles;      			 /**< Handles related to the measurement config characteristic. */
     uint16_t                     conn_handle;                  /**< Handle of the current connection (as provided by the BLE stack, is BLE_CONN_HANDLE_INVALID if not in a connection). */
-		bool                         space_time_present;       		 /**< True if coordinte + sequence number is present. */
-		its_measurement_location_t   coord;                   		 /**< New measurement Coordinate. */
+		
+		uint8_t										   coord;                   		 /**< New measurement Coordinate. */
 		uint16_t										 curr_seq_nr;									 /**< Current Sequence Number*/
-		bool                         unit_present;     		  	  	 /**< True if Unit is present. */
 		uint16_t                     unit;      	   							 /**< Unit https://developer.bluetooth.org/gatt/units/Pages/default.aspx */
-	  bool                         type_make_present;     		   /**< True if sensor type is present. */
-		uint8_t                      type;      	   							 /**< ITU type */
+	  uint8_t                      type;      	   							 /**< ITU type */
 		uint8_t                      make;      	   							 /**< ITU make */
-		bool                         ID_present;      	           /**< True if ID should is included*/
 		uint16_t										 ID;													 /**< New ITU allocated ID */
-    bool                         samp_freq_present;        		 /**< True if Sampling Frequence is present. */
 		uint32_t										 samp_freq_in_m_sec;					 /**< New Sampling Frequency in miliseconds*/		
 		int8_t											 IEEE_exponent;								 /**< Exponent used for encoding the IEEE float*/
-		bool												 is_notification_supported;		 /**< Flag to indicate if client has enabled notifications*/
 		void (*p_update_samp_freq)(void);									 				 /**< Function to update the sampling frequency if client asks for it*/
-		bool gatt_db_needs_cleaning;															 /**< Flag to indicate that presentation config has been changed, and we need to clean the gatt db*/
 		app_timer_id_t							 meas_timer;									 /**< Timer id used to start/stop*/
-		bool												 timer_running;								 /**< True if running, false otherwise */		
 		uint32_t										 last_measurement;
-		bool												 is_sensor;
 		void (*p_persist_measurement)(struct iss *);
+		bool                         samp_freq_present: 1;        		 /**< True if Sampling Frequence is present. */
+		bool												 timer_running: 1;								 /**< True if running, false otherwise */		
+		bool 												 gatt_db_needs_cleaning: 1;				 /**< Flag to indicate that presentation config has been changed, and we need to clean the gatt db*/
+		bool												 is_notification_supported: 1;		 /**< Flag to indicate if client has enabled notifications*/
+		bool                         ID_present: 1;      	           	 /**< True if ID should is included*/
+		bool                         type_make_present: 1;     		   	 /**< True if sensor type is present. */
+		bool                         unit_present: 1;     		  	  	 /**< True if Unit is present. */
+		bool                         space_time_present: 1;       		 /**< True if coordinte + sequence number is present. */
 } iss_t;
 
 

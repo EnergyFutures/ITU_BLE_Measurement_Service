@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <ble_types.h>
 #include "nordic_common.h"
 #include "app_error.h"
 #include "nrf_gpio.h"
@@ -44,49 +45,45 @@
 #include "ble_dis.h"
 #include "main.h"
 #include "mote_config.h"
-#include "read_all_sensor_service.h"
+#include "mote_service.h"
 
-//Device Information Service
-#define MANUFACTURER_NAME                    "DENMARK ITU 4D21"						               /**< Manufacturer. Will be passed to Device Information Service. */
-#define MODEL_NUM                            "BLEoT SENSOR"     												 /**< Model number. Will be passed to Device Information Service. */
-#define MANUFACTURER_ID                      ITU_COMPANY_ID                              /**< Manufacturer ID, part of System ID. Will be passed to Device Information Service. */
-#define ORG_UNIQUE_ID                        ITU_COMPANY_ID                              /**< Organizational Unique ID, part of System ID. Will be passed to Device Information Service. */
 #define DEAD_BEEF                       		 0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
-
-static uint16_t                         		 m_conn_handle = BLE_CONN_HANDLE_INVALID;    /**< Handle of the current connection. */
 bool do_measurements = true;
+static uint16_t                         		 m_conn_handle = BLE_CONN_HANDLE_INVALID;    /**< Handle of the current connection. */
 
 //STORAGE // CACHE
-static pstorage_handle_t one_page_handle;
+static uint8_t cache_val[HALF_BLOCK_SIZE] __attribute__((aligned(4)));
+
 static uint8_t buffer_full = 0;
+static uint8_t battery_level = 10;
+static uint16_t batt_counter = 0;
+
 
 static storage_struct_t storage_struct = {
-.pstorage_wait_flag = false,
-.pstorage_clearing = false,
-.pstorage_wait_handle = 0,
-.current_block = 0,
-.current_offset = 0,
-.power_manage = power_manage,
-.clear_cache = clear_cache
+	.pstorage_wait_flag = false,
+	.pstorage_clearing = false,
+	.pstorage_wait_handle = 0,
+	.current_block = 0,
+	.current_offset = 0,
+	.current_off_loading_block = 0,
+	.clear_cache = clear_cache
 };
 
+static mote_config_struct_t mote_config = {
+	.device_name = DEVICE_NAME,
+	.location_name = LOCATION_NAME,
+	.adv_freq_sec = DEFAULT_ADVERTISEMENT_FREQUENCY_IN_SEC,
+	.block_count_percent_for_buffer_full = BLOCK_COUNT_PROCENT,
+};
 
 
 //BROADCAST / ADVERTISEMENT
 #define MAX_BROADCAST_LENGTH 								 (31 - 3 - 2) 															 //31 = max bytes.. 3 = flags... 2= length + type for manuf_specific_data
 static uint8_t encoded_broadcast[MAX_BROADCAST_LENGTH];
-static uint8_t encoded_broadcast_length = 1;
-static uint8_t broadcast_header = 0;
 static uint8_t location_name_length;
+static uint8_t device_name_length;
 static ble_advdata_t advdata;
 static ble_gap_adv_params_t adv_params;
-static uint8_t flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-static iss_broadc_t header = {
-		.type_present = true,
-		.misc_present = true,
-		.value_present = true,
-		.coor_present = true
-};
 
 
 // Persistent storage system event handler
@@ -94,6 +91,7 @@ void pstorage_sys_event_handler (uint32_t p_evt);
 
 static void power_manage(void)
 {
+		app_sched_execute();
     uint32_t err_code = sd_app_evt_wait();
     APP_ERROR_CHECK(err_code);
 }
@@ -105,16 +103,29 @@ void ADC_IRQHandler(void)
 	/* Clear dataready event */
   NRF_ADC->EVENTS_END = 0;	
 	uint8_t pin = (NRF_ADC->CONFIG >> ADC_CONFIG_PSEL_Pos);
-	for(uint8_t i = 0; i < total_services_size; i++){
+	if(pin == 0){
+		battery_level = (NRF_ADC->RESULT / 1024.0) * 100.0; 
+		battery_level = 100 - battery_level;
+	}else{
+		for(uint8_t i = 0; i < total_services_size; i++){
 			if(all_services[i]->needs_adc && all_services[i]->adc_done != NULL){
 					if(all_services[i]->adc_done(pin)){
 						break;
 					}
 			}
+		}
 	}
+	
 	//Use the STOP task to save current. Workaround for PAN_028 rev1.5 anomaly 1.
   NRF_ADC->TASKS_STOP = 1;
+	//Disable ADC to save current
+	NRF_ADC->ENABLE = ADC_ENABLE_ENABLE_Disabled;
 }	
+
+static void battery_level_get(void)
+{
+	adc_init(ADC_CONFIG_PSEL_Disabled,ADC_CONFIG_INPSEL_SupplyOneThirdPrescaling);
+}
 
 void app_error_handler(uint32_t error_code, uint32_t line_num, const uint8_t * p_file_name)
 {
@@ -127,7 +138,7 @@ void app_error_handler(uint32_t error_code, uint32_t line_num, const uint8_t * p
     //                The flash write will happen EVEN if the radio is active, thus interrupting
     //                any communication.
     //                Use with care. Un-comment the line below to use.
-   // ble_debug_assert_handler(error_code, line_num, p_file_name);
+		ble_debug_assert_handler(error_code, line_num, p_file_name);
 		while(true){;}
 }
 
@@ -160,7 +171,7 @@ static void timers_init(void)
     for(uint8_t i = 0; i < total_services_size; i++){
 				all_services[i]->timer_init();
 		}
-		irass_timer_init();
+		ims_timer_init();
 }
 
 
@@ -173,15 +184,7 @@ static void gap_params_init(void)
 {
     uint32_t                err_code;
     ble_gap_conn_params_t   gap_conn_params;
-    ble_gap_conn_sec_mode_t sec_mode;
-
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
-
-    err_code = sd_ble_gap_device_name_set(&sec_mode,
-                                          (const uint8_t *)DEVICE_NAME,
-                                          strlen(DEVICE_NAME));
-    APP_ERROR_CHECK(err_code);
-
+    
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
 
     gap_conn_params.min_conn_interval = MIN_CONN_INTERVAL;
@@ -191,6 +194,7 @@ static void gap_params_init(void)
 
     err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
     APP_ERROR_CHECK(err_code);
+		sd_ble_gap_tx_power_set(NONCONNECTABLE_TRANSMIT_POWER_DB);
 }
 
 /**@brief Function for initializing the Advertising functionality.
@@ -198,10 +202,11 @@ static void gap_params_init(void)
  * @details Encodes the required advertising data and passes it to the stack.
  *          Also builds a structure to be passed to the stack when starting advertising.
  */
-static void advertising_init(void){
-		uint8_t device_name_length = strlen(DEVICE_NAME);
-		location_name_length = strlen(LOCATION_NAME);
-		if((device_name_length + location_name_length) != 14){
+void advertising_init(void){
+		device_name_length = strlen(mote_config.device_name);
+		uint8_t device_name_bytes = device_name_length ? 2 : 0;
+		location_name_length = strlen(mote_config.location_name);
+		if((device_name_length + device_name_bytes + location_name_length) > 13){
 			APP_ERROR_CHECK(777);	
 		}
 		if(location_name_length < 1){
@@ -212,43 +217,19 @@ static void advertising_init(void){
 		
     if (device_name_length > 0)
     {
-        broadcast_header |= ITS_BROADC_FLAG_NAME_BIT;
 				advdata.name_type               = BLE_ADVDATA_SHORT_NAME;
+				ble_gap_conn_sec_mode_t sec_mode;
+				BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
+				APP_ERROR_CHECK(sd_ble_gap_device_name_set(&sec_mode,(const uint8_t *)mote_config.device_name,device_name_length));
     }else{
 				advdata.name_type               = BLE_ADVDATA_NO_NAME;
 		}
 		
-		if (location_name_length > 0)
-    {
-        broadcast_header |= ITS_BROADC_FLAG_LOCATION_BIT;
-				for(int y = 0; y < location_name_length; y++){
-						encoded_broadcast[encoded_broadcast_length++] = ((uint8_t *)LOCATION_NAME)[y];
-				}
-    }
-		
-		if (header.type_present)
-    {
-        broadcast_header |= ITS_BROADC_FLAG_TYPE_BIT;
+		for(int i = 0; i < location_name_length; i++){
+				encoded_broadcast[i] = mote_config.location_name[i];
 		}
-		
-    if (header.value_present)
-    {
-        broadcast_header |= ITS_BROADC_FLAG_VALUE_BIT;
-    }    
-		
-    if (header.coor_present)
-    {
-        broadcast_header |= ITS_BROADC_FLAG_COORDINATE_BIT;
-    }
-	
-    if (header.misc_present)
-    {
-				broadcast_header |= ITS_BROADC_FLAG_MISC_BIT;
-		}			
-		encoded_broadcast[0] = broadcast_header;
-		
-		advdata.flags.size              = sizeof(flags);
-		advdata.flags.p_data            = &flags;
+		encoded_broadcast[location_name_length] = '\0';
+			
 		advdata.include_appearance      = false;
 		
 		memset(&adv_params, 0, sizeof(adv_params));
@@ -257,54 +238,57 @@ static void advertising_init(void){
     adv_params.fp          = BLE_GAP_ADV_FP_ANY;
 		
 
-		uint8_t APP_ADV_TIMEOUT_IN_SECONDS;
+		uint16_t timeout_in_sec;
 		if(total_services_size == 1){
-			//THIS VALUE MAY BE OVERIDDEN IN services_init()
-			APP_ADV_TIMEOUT_IN_SECONDS = 0;
+			if(SENSORS_SIZE == 1){
+				iss_t * service = sensors[0]->service;
+				uint16_t sam_freq = service->samp_freq_in_m_sec / 1000;
+				timeout_in_sec  = sam_freq >= 0x3fff ? 0x3fff : sam_freq+1;  // Advertising timeout between 0x0001 and 0x3FFF in seconds, 0x0000 disables timeout.
+			}else{
+				timeout_in_sec = 0;
+			}
 		}else{
-			APP_ADV_TIMEOUT_IN_SECONDS = 1;
+			timeout_in_sec = mote_config.adv_freq_sec;
 		}   
-    adv_params.interval    = MSEC_TO_UNITS(1100, UNIT_0_625_MS);
-    adv_params.timeout     = APP_ADV_TIMEOUT_IN_SECONDS;
+    adv_params.interval    = MSEC_TO_UNITS(mote_config.adv_freq_sec * 1050, UNIT_0_625_MS);
+    adv_params.timeout     = timeout_in_sec;
 }
 
 static void its_broadcast_encode_and_set(void * p_itu_service_struct, uint8_t type){
-		
-		encoded_broadcast_length = 1 + location_name_length;
+		uint8_t encoded_broadcast_length = location_name_length+1;
 		bool is_actuator = type;
-    if (header.type_present)
-    {
-			encoded_broadcast[encoded_broadcast_length++] = is_actuator ? ((ias_t *)p_itu_service_struct)->type : ((iss_t *)p_itu_service_struct)->type;
-		}
-		
-    if (header.value_present)
-    {
-				encoded_broadcast_length += uint32_encode(is_actuator ? ((ias_t *)p_itu_service_struct)->value : ((iss_t *)p_itu_service_struct)->last_measurement, &encoded_broadcast[encoded_broadcast_length]);
-    }    
-		
-    if (header.coor_present)
-    {
-				encoded_broadcast[encoded_broadcast_length++] = is_actuator ? ((ias_t *)p_itu_service_struct)->coord : ((iss_t *)p_itu_service_struct)->coord;
-    }
-		
-		if(storage_struct.current_block > BLOCK_COUNT_PROCENT && buffer_full != 1){
+    if(storage_struct.current_block > ((BLOCK_COUNT / 100 ) * mote_config.block_count_percent_for_buffer_full) && buffer_full != 1){
 			buffer_full = 1;
 			sd_ble_gap_tx_power_set(CONNECTABLE_TRANSMIT_POWER_DB);
 		}
+		
+		//BUFFER LEVEL
+		encoded_broadcast[encoded_broadcast_length++] = (storage_struct.current_block * 100 ) / BLOCK_COUNT;
 	
-		//MISC (xxxxyyyz) = xxxx for battery procentage in increments of 10, yyy for service type (sensor or actuator or mix), z for buffer full
-    if (header.misc_present)
-    {
-				uint8_t misc = 0x00;
-							
-				misc |= buffer_full;
+		//MISC (zzzzzzxy) = zzzzzz for battery diff (100 - level), x for buffer-full, y for service type (sensor or actuator)
+    uint8_t misc = 0x00;
+		misc |= is_actuator;
+		misc |= buffer_full << 1;
 				
-				misc |= (is_actuator << 1);
-				
-				//Hardcoded 90 procent battery
-				misc |= (0x09 << 4);
-				encoded_broadcast[encoded_broadcast_length++] = misc;
-		}			
+		if(batt_counter++ == NUMBER_OF_SEC_FOR_BATTERY_CHECK){
+			batt_counter = 0;
+			battery_level_get();
+		}
+		misc |= (battery_level << 2);
+		encoded_broadcast[encoded_broadcast_length++] = misc;	
+		if(is_actuator){
+			ias_t * pointer = (ias_t *)p_itu_service_struct;
+			encoded_broadcast[encoded_broadcast_length++] = pointer->type ;
+			encoded_broadcast_length += uint32_encode(pointer->value, &encoded_broadcast[encoded_broadcast_length]);
+			encoded_broadcast[encoded_broadcast_length++] = pointer->coord ;
+			encoded_broadcast_length += uint16_encode(0, &encoded_broadcast[encoded_broadcast_length]);
+		}else{
+			iss_t * pointer = (iss_t *)p_itu_service_struct;
+			encoded_broadcast[encoded_broadcast_length++] = pointer->type;
+			encoded_broadcast_length += uint32_encode(pointer->last_measurement, &encoded_broadcast[encoded_broadcast_length]);
+			encoded_broadcast[encoded_broadcast_length++] = pointer->coord;
+			encoded_broadcast_length += uint16_encode(pointer->ID, &encoded_broadcast[encoded_broadcast_length]);
+		}
 		
 		uint8_array_t data;
 		data.size = encoded_broadcast_length;
@@ -316,20 +300,25 @@ static void its_broadcast_encode_and_set(void * p_itu_service_struct, uint8_t ty
 		ble_data.data = data;		
     advdata.p_manuf_specific_data = &ble_data;
 		
-		if(buffer_full || actuators_size > 0){
+		if(buffer_full || ACTUATORS_SIZE > 0){
 				adv_params.type        = BLE_GAP_ADV_TYPE_ADV_IND;
 		}else{
 				adv_params.type        = BLE_GAP_ADV_TYPE_ADV_NONCONN_IND;
 		}
 		
-		uint32_t      err_code = 0;		
+		uint32_t      err_code = 0;	
+		uint8_t flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+		advdata.flags.size              = sizeof(flags);
+		advdata.flags.p_data            = &flags;		
 		err_code = ble_advdata_set(&advdata, NULL);
     APP_ERROR_CHECK(err_code);
     err_code = sd_ble_gap_adv_start(&adv_params);
     APP_ERROR_CHECK(err_code);
 }
 
-static void advertising_start(void){
+static void advertising_start(void *data, uint16_t size){
+	UNUSED_PARAMETER(data);
+	UNUSED_PARAMETER(size);
 	static uint8_t current_service_nr = 0;
 	if(current_service_nr == total_services_size ){
 			current_service_nr = 0;
@@ -338,68 +327,7 @@ static void advertising_start(void){
 	current_service_nr++;
 }
 
-static void advertising_start_sche(void *data, uint16_t size){
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(size);
-	advertising_start();
-}
-
-
-
-static void clear_cache_sche1(void *data, uint16_t size){
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(size);	
-		storage_struct.current_block = 0;
-		storage_struct.current_offset = 0;
-		storage_struct.pstorage_clearing = true;
-		pstorage_clear(&storage_struct.pstorage_handle,(BLOCK_SIZE*BLOCK_COUNT)/2);		
-}
-
-static void clear_cache_sche2(void *data, uint16_t size){
-		UNUSED_PARAMETER(data);
-		UNUSED_PARAMETER(size);
-		pstorage_block_identifier_get(&storage_struct.pstorage_handle,BLOCK_COUNT/2, &one_page_handle);
-		storage_struct.pstorage_wait_flag = true;
-		storage_struct.pstorage_wait_handle = one_page_handle.block_id;
-		storage_struct.pstorage_clearing = true;
-		pstorage_clear(&one_page_handle,(BLOCK_SIZE*BLOCK_COUNT)/2);
-}
-
-static void clear_cache(void){
-		app_sched_event_put(NULL, 0, clear_cache_sche1);			
-		app_sched_event_put(NULL, 0, clear_cache_sche2);
-		sd_ble_gap_tx_power_set(NONCONNECTABLE_TRANSMIT_POWER_DB);
-		buffer_full = false;
-}
-
-static void persist_measurement(iss_t * iss_struct){
-	//only update if we are not connected
-	if((m_conn_handle == BLE_CONN_HANDLE_INVALID) && (!storage_struct.pstorage_clearing) && (storage_struct.current_block < BLOCK_COUNT)){
-			uint32_t error_code;	
-			pstorage_handle_t block_handle;
-			error_code = pstorage_block_identifier_get(&storage_struct.pstorage_handle, storage_struct.current_block, &block_handle);
-			APP_ERROR_CHECK(error_code);
-			uint8_t cache_val[8];
-			uint32_encode(iss_struct->last_measurement,cache_val);
-			uint16_encode(iss_struct->curr_seq_nr,&(cache_val[4]));
-			uint16_encode(iss_struct->ID,&(cache_val[6]));
-			while(storage_struct.pstorage_wait_flag){
-				power_manage();
-			}
-			storage_struct.pstorage_wait_flag = true;
-			storage_struct.pstorage_wait_handle = block_handle.block_id;			
-			error_code = pstorage_store(&block_handle, cache_val, 8, storage_struct.current_offset);
-			APP_ERROR_CHECK(error_code);
-			if(storage_struct.current_offset > 0){
-					storage_struct.current_block++;
-					storage_struct.current_offset = 0;
-			}else{
-					storage_struct.current_offset = 8;
-			}
-	}
-}
-
-static void init_ISS_struct (itu_service_t * iss_struct, uint32_t * err_code){
+static void init_ISS_struct (itu_service_t * iss_struct, uint32_t * err_code, uint8_t id){
 		//Initialise ITU Temperature Service
 		iss_t * service = iss_struct->service;
 		memset(service, 0, sizeof(iss_t));
@@ -416,7 +344,7 @@ static void init_ISS_struct (itu_service_t * iss_struct, uint32_t * err_code){
 
 		service->type_make_present = false;
 	
-		service->ID = 4;
+		service->ID = id;
 		service->ID_present = false;
 	
 		service->samp_freq_in_m_sec = DEFAULT_SAMPLING_FREQUENCY_IN_MS;
@@ -439,45 +367,25 @@ static void init_ISS_struct (itu_service_t * iss_struct, uint32_t * err_code){
 static void services_init(void)
 {
     uint32_t         err_code;
-    ble_dis_init_t   dis_init;
-    ble_dis_sys_id_t sys_id;
-	
-		for(uint8_t i = 0; i < sensors_size; i++){
-			init_ISS_struct(sensors[i],&err_code);
+		uint8_t id = 0;
+
+		#if(SENSORS_SIZE > 0)
+		for(uint8_t i = 0; i < SENSORS_SIZE; i++){
+			init_ISS_struct(sensors[i],&err_code,id++);
 			APP_ERROR_CHECK(err_code);
 		}
-		
-		//FIXME what if we change the freq in the future
-		if(total_services_size == 1 && sensors_size == 1){
-			iss_t * service = sensors[0]->service;
-			uint16_t sam_freq = service->samp_freq_in_m_sec / 900; //900 ensures that we time out after the samp freq
-			adv_params.timeout    = sam_freq > 0x3fff ? 0x3fff : sam_freq;  // Advertising timeout between 0x0001 and 0x3FFF in seconds, 0x0000 disables timeout.
-		}
-		
-		for(uint8_t i = 0; i < actuators_size; i++){
+		#endif
+		#if(ACTUATORS_SIZE > 0)
+		for(uint8_t i = 0; i < ACTUATORS_SIZE; i++){
 			ias_t * service = actuators[i]->service;
 			memset(service, 0, sizeof(ias_t));
 			err_code =  ias_initialize(service);
 			APP_ERROR_CHECK(err_code);
 		}
-		
-    // Initialize Device Information Service.
-    memset(&dis_init, 0, sizeof(dis_init));
+		#endif
     
-    ble_srv_ascii_to_utf8(&dis_init.manufact_name_str, MANUFACTURER_NAME);
-    ble_srv_ascii_to_utf8(&dis_init.model_num_str,     MODEL_NUM);
-
-    sys_id.manufacturer_id            = MANUFACTURER_ID;
-    sys_id.organizationally_unique_id = ORG_UNIQUE_ID;
-    dis_init.p_sys_id                 = &sys_id;
-    
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&dis_init.dis_attr_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&dis_init.dis_attr_md.write_perm);
-
-    err_code = ble_dis_init(&dis_init);
-    APP_ERROR_CHECK(err_code);
 		
-		err_code = irass_initialize(&storage_struct);
+		err_code = ims_initialize(&storage_struct,&mote_config);
 		APP_ERROR_CHECK(err_code);
 }
 
@@ -507,7 +415,7 @@ static void conn_params_init(void)
     cp_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
     cp_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
     cp_init.start_on_notify_cccd_handle    = BLE_GATT_HANDLE_INVALID;
-    cp_init.disconnect_on_fail             = true;
+    cp_init.disconnect_on_fail             = false;
     cp_init.evt_handler                    = NULL;
     cp_init.error_handler                  = conn_params_error_handler;
 
@@ -518,11 +426,29 @@ static void conn_params_init(void)
 
 /**@brief Function for starting application timers.
  */
-static void application_timers_start(void)
+static void application_timers_start(void *data, uint16_t use_offset)
 {
+		UNUSED_PARAMETER(data);
+		if(use_offset){
+			//If we are in this state, then we just cleaned the cache and wish to continue as fast as possible
+			//But to avoid to have to many consecutive time-outs we let the timers start with an offset
+			for(uint8_t i = 0; i < total_services_size; i++){
+				all_services[i]->timer_start((i+1) * 100);			
+			}		
+		}else{
 		for(uint8_t i = 0; i < total_services_size; i++){
-				all_services[i]->timer_start();
-				nrf_delay_ms(50);
+				all_services[i]->timer_start(0);
+				nrf_delay_ms(200); // so we don't get to many time outs in one go
+			}		
+		}		
+}
+
+static void application_timers_stop(void *data, uint16_t size)
+{
+		UNUSED_PARAMETER(data);
+		UNUSED_PARAMETER(size);
+		for(uint8_t i = 0; i < total_services_size; i++){
+				all_services[i]->timer_stop();
 		}		
 }
 
@@ -541,12 +467,17 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
+						do_measurements = false;
 						m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+						err_code = app_sched_event_put(NULL, 0, application_timers_stop);
+						APP_ERROR_CHECK(err_code);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
             m_conn_handle               = BLE_CONN_HANDLE_INVALID;
-            app_sched_event_put(NULL, 0, advertising_start_sche);
+            err_code = app_sched_event_put(NULL, 0, advertising_start);
+						APP_ERROR_CHECK(err_code);
+						do_measurements = true; //has to come before we start timers
             break;
 
         /*case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
@@ -583,7 +514,8 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
         case BLE_GAP_EVT_TIMEOUT:
             if (p_ble_evt->evt.gatts_evt.params.timeout.src == BLE_GAP_TIMEOUT_SRC_ADVERTISEMENT)
             {
-                app_sched_event_put(NULL, 0, advertising_start_sche);
+               err_code = app_sched_event_put(NULL, 0, advertising_start);
+							 APP_ERROR_CHECK(err_code);
             }
             break;
 				case BLE_GATTC_EVT_TIMEOUT:
@@ -591,7 +523,8 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             // Disconnect on GATT Server and Client timeout events.
             err_code = sd_ble_gap_disconnect(m_conn_handle,BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             APP_ERROR_CHECK(err_code);
-						app_sched_event_put(NULL, 0, advertising_start_sche);
+						err_code = app_sched_event_put(NULL, 0, advertising_start);
+						APP_ERROR_CHECK(err_code);
             break;
         default:
             // No implementation needed.
@@ -612,7 +545,7 @@ static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
 		for(uint8_t i = 0; i < total_services_size; i++){
 				all_services[i]->ble_evt(p_ble_evt);
 		}
-		irass_on_ble_evt(p_ble_evt);
+		ims_on_ble_evt(p_ble_evt);
     ble_conn_params_on_ble_evt(p_ble_evt);
     on_ble_evt(p_ble_evt);
 }
@@ -656,6 +589,12 @@ static void ble_stack_init(void)
     // Register with the SoftDevice handler module for BLE events.
     err_code = softdevice_sys_evt_handler_set(sys_evt_dispatch);
     APP_ERROR_CHECK(err_code);
+		
+		//ble_uuid128_t ITU_BASE_UUID = {0x21, 0x4E, 0x49, 0x57, 0x45, 0x48, 0x54, 0x34, 0x31, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+		//err_code = sd_ble_uuid_vs_add(&ITU_BASE_UUID, &ITU_UUID_TYPE);
+		//APP_ERROR_CHECK(err_code);
+		
+		// WE HAVE TO USE STANDARD UUID OR WE GET PROBLEMS WITH MEM
 }
 
 
@@ -686,20 +625,58 @@ static void init_timer_module(void){
 		APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_MAX_TIMERS, APP_TIMER_OP_QUEUE_SIZE, true);
 }
 
+static void clear_cache(void *data, uint16_t startup_clean){
+		UNUSED_PARAMETER(data);	
+		buffer_full = false;
+		storage_struct.current_off_loading_block = 0;
+		storage_struct.current_block = 0;
+		storage_struct.current_offset = 0;	
+		storage_struct.pstorage_clearing = !startup_clean;
+		pstorage_clear(&storage_struct.pstorage_handle,BLOCK_COUNT*BLOCK_SIZE);
+}
+
+static void persist_measurement(iss_t * iss_struct){
+	//only update if we are not connected
+	if((m_conn_handle == BLE_CONN_HANDLE_INVALID) && (!storage_struct.pstorage_clearing) && (storage_struct.current_block < BLOCK_COUNT)){
+		while(storage_struct.pstorage_wait_flag){
+			power_manage();
+		}
+		uint32_t error_code;	
+		pstorage_handle_t block_handle;
+		error_code = pstorage_block_identifier_get(&storage_struct.pstorage_handle, storage_struct.current_block, &block_handle);
+		APP_ERROR_CHECK(error_code);
+		
+		uint32_encode(iss_struct->last_measurement,cache_val);
+		uint16_encode(iss_struct->curr_seq_nr,&(cache_val[SEQUENCE_NUMBER_OFFSET]));
+		uint16_encode(iss_struct->ID,&(cache_val[ID_OFFSET]));
+		
+		storage_struct.pstorage_wait_flag = true;
+		storage_struct.pstorage_wait_handle = block_handle.block_id;			
+		error_code = pstorage_store(&block_handle, cache_val, HALF_BLOCK_SIZE, storage_struct.current_offset);
+		APP_ERROR_CHECK(error_code);
+		if(storage_struct.current_offset > 0){
+				storage_struct.current_block++;
+				storage_struct.current_offset = 0;
+		}else{
+				storage_struct.current_offset = HALF_BLOCK_SIZE;
+		}
+	}
+}
+
 static void storage_handler(pstorage_handle_t  * handle, uint8_t op_code, uint32_t result, uint8_t * p_data, uint32_t data_len){
 
 		//If we are waiting for this callback, clear the wait flag.	
 		if(handle->block_id == storage_struct.pstorage_wait_handle) {
 				storage_struct.pstorage_wait_flag = false;
-		}  
-		if(PSTORAGE_CLEAR_OP_CODE == op_code && handle->block_id == one_page_handle.block_id){
+		}else if(PSTORAGE_CLEAR_OP_CODE == op_code && storage_struct.pstorage_clearing){
 			storage_struct.pstorage_clearing = false;
 			//WE ONLY ENABLE MEASUREMENTS ONCE ALL CACHE IS CLEARED
+			sd_ble_gap_tx_power_set(NONCONNECTABLE_TRANSMIT_POWER_DB);
 			do_measurements	= true;
+			uint32_t err_code = app_sched_event_put(NULL, 1, application_timers_start);
+			APP_ERROR_CHECK(err_code);
 		}
-		if(result != NRF_SUCCESS){
-			APP_ERROR_CHECK(result);
-		}
+		APP_ERROR_CHECK(result);
 }
 
 
@@ -713,28 +690,38 @@ static void initStorage(void){
 	param.cb = storage_handler;
 	err_code = pstorage_register(&param, &storage_struct.pstorage_handle);
 	APP_ERROR_CHECK(err_code);
-	clear_cache();
+	clear_cache(NULL,1);
 }
 
 static void registerServices(void){
+	#if(SENSORS_SIZE > 0)
 	registerSensors();
+	#endif
+	#if(ACTUATORS_SIZE > 0)
 	registerActuators();
+	#endif
 	uint8_t i = 0;
-	for(; i < (total_services_size - actuators_size); i++){
+	#if(SENSORS_SIZE > 0)
+	for(; i < (total_services_size - ACTUATORS_SIZE); i++){
 		all_services[i] = sensors[i];
 	}
-	for(uint8_t j = 0; j < (total_services_size - sensors_size); j++){
+	#endif
+	#if(ACTUATORS_SIZE > 0)
+	for(uint8_t j = 0; j < (total_services_size - SENSORS_SIZE); j++){
 		all_services[i++] = actuators[j];
 	}
+	#endif
 }
 
 void gpiote_event_handler (uint32_t event_pins_low_to_high, uint32_t event_pins_high_to_low)
 {
-	for(uint8_t i = 0; i < total_services_size; i++){
-		if(all_services[i]->needs_gpiote){
-			all_services[i]->on_gpiote_event(&event_pins_low_to_high,&event_pins_high_to_low);
+	if(do_measurements){
+		for(uint8_t i = 0; i < total_services_size; i++){
+			if(all_services[i]->needs_gpiote){
+				all_services[i]->on_gpiote_event(&event_pins_low_to_high,&event_pins_high_to_low);
+			}
 		}
-	}
+	}	
 }
 
 static void init_gpiote(){
@@ -765,22 +752,22 @@ int main(void)
     ble_stack_init();
 		scheduler_init();
 		initStorage();
-		gap_params_init();
-    advertising_init();
 		conn_params_init();
 		services_init();
+		gap_params_init();
+		advertising_init();
 		//Timer init function call must come after service init, or the timer id will be erased by memset
 		timers_init();
     adc_first_time_init();
 		init_sensors_and_actuators();
 		
     // Start execution.
-		application_timers_start();				
-    advertising_start();	
+		battery_level_get();
+		application_timers_start(NULL,0);				
+    advertising_start(NULL,0);	
 		init_gpiote();
-    for (;;)
+    while(true)
     {
-				app_sched_execute();
-        power_manage();
+				power_manage();
     }
 }

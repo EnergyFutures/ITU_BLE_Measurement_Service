@@ -109,9 +109,9 @@ static uint32_t add_conf_char(ias_t * p_ias)
     
 		//BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_ITU_MEASUREMENT_VALUE_CHAR);
 		//Expanded the above macro to the code below for readability
-    ble_uuid.type = BLE_UUID_TYPE_BLE; \
+    ble_uuid.type = BLE_UUID_TYPE_BLE; 
     ble_uuid.uuid = BLE_UUID_ITU_ACTUATOR_COMMAND_CHAR;
-		
+		 
 		
     memset(&attr_md, 0, sizeof(attr_md));
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
@@ -152,10 +152,9 @@ uint32_t ias_initialize(ias_t * p_ias)
 		
 		//Initialize service structure
     p_ias->conn_handle     	= BLE_CONN_HANDLE_INVALID;
-		p_ias->is_sensor = false;
     
-    // Add service
-    BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_ITU_ACTUATOR_SERVICE);
+		ble_uuid.type = BLE_UUID_TYPE_BLE; 
+    ble_uuid.uuid = BLE_UUID_ITU_ACTUATOR_SERVICE;
 
     err_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &ble_uuid, &p_ias->service_handle);
     if (err_code != NRF_SUCCESS)

@@ -13,6 +13,7 @@ uint8_t motion_detected = 0;
 static iss_t iss_struct; 
 static itu_service_t motion_sensor ={.timer_init = sensor_timer_init,
 																		.timer_start = sensor_timer_start,
+																		.timer_stop = sensor_timer_stop,
 																		.init = init,
 																		.ble_evt = sensor_ble_evt,
 																		.service = &iss_struct,
@@ -39,36 +40,38 @@ static void on_gpiote_event(uint32_t *low_to_high,uint32_t *high_to_low){
 	}	
 }
 
-static void update_value_timer_handler_sche(void *data, uint16_t size){
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(size);
-	int32_t value = motion_detected*100; 
-	update_iss_measurement(&iss_struct, &value);
-	motion_detected = 0;	
-}
-
 static void update_value_timer_handler(void * p_context)
 {        
 	UNUSED_PARAMETER(p_context);	
 	if(do_measurements){
-		app_sched_event_put(NULL, 0, update_value_timer_handler_sche);
+		int32_t value = motion_detected; 
+		update_iss_measurement(&iss_struct, &value);
+		motion_detected = 0;
+		uint32_t err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
+		APP_ERROR_CHECK(err_code);
 	}
 }
-
 
 static void sensor_timer_init(void)
 {
 		uint32_t err_code;	
-		err_code = app_timer_create(&iss_struct.meas_timer,APP_TIMER_MODE_REPEATED,update_value_timer_handler);
+		err_code = app_timer_create(&iss_struct.meas_timer,APP_TIMER_MODE_SINGLE_SHOT,update_value_timer_handler);
 		APP_ERROR_CHECK(err_code);
 }
 
 
-static void sensor_timer_start(void)
+static void sensor_timer_start(uint16_t offset)
 {
-		uint32_t err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
+	uint32_t err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(offset ? offset : iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
 		APP_ERROR_CHECK(err_code);
 		iss_struct.timer_running = true;
+}
+
+static void sensor_timer_stop(void)
+{
+		uint32_t err_code = app_timer_stop(iss_struct.meas_timer);
+		APP_ERROR_CHECK(err_code);
+		iss_struct.timer_running = false;
 }
 
 
@@ -84,6 +87,7 @@ static void update_measurement_samp_freq(){
 			APP_ERROR_CHECK(err_code);
 			err_code = app_timer_start(iss_struct.meas_timer, APP_TIMER_TICKS(iss_struct.samp_freq_in_m_sec, APP_TIMER_PRESCALER), &iss_struct);
 			APP_ERROR_CHECK(err_code);
+			advertising_init();
 	 }   
 }
 
@@ -101,4 +105,6 @@ static void init(void){
 	iss_struct.coord = MOTION_COORDINATE;
 	iss_struct.type = BLE_UUID_ITU_SENSOR_TYPE_MOTION;
 	iss_struct.make = BLE_UUID_ITU_SENSOR_MAKE_EKMB1303112;
+	iss_struct.IEEE_exponent = 0;
+	//iss_struct.samp_freq_in_m_sec = 10000;
 }

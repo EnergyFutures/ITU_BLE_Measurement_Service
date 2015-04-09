@@ -8,12 +8,13 @@
 #include "nrf_gpio.h"
 #include "nrf_soc.h"
 #include <math.h>
-#include "itu_service.h"
+
 
 static ias_t ias_struct; 
 static itu_service_t ac_actuator =
  {.timer_init = actuator_timer_init,
 	.timer_start = actuator_timer_start,
+	 .timer_stop = actuator_timer_stop,
 	.init = init,
 	.ble_evt = actuator_ble_evt,
 	.service = &ias_struct,
@@ -31,7 +32,9 @@ itu_service_t * get_ac_actuator(void){
 
 static void actuator_timer_init(void){}
 
-static void actuator_timer_start(void){}
+static void actuator_timer_start(uint16_t offset){}
+	
+static void actuator_timer_stop(void){}
 
 
 static void actuator_ble_evt(ble_evt_t * p_ble_evt)
