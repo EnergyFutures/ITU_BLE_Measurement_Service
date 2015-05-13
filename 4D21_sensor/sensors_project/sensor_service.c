@@ -482,7 +482,7 @@ uint32_t iss_initialize(iss_t * p_iss)
 uint32_t iss_update_config(iss_t * p_iss){
 	uint8_t             encoded_meas_conf[MAX_HTM_LEN];
 	uint16_t len = its_conf_encode(p_iss, encoded_meas_conf);
-	uint32_t err_code = sd_ble_gatts_value_set(p_iss->meas_conf_handles.value_handle,
+	return sd_ble_gatts_value_set(p_iss->meas_conf_handles.value_handle,
 																			0,
 																			&len,
 																			encoded_meas_conf);

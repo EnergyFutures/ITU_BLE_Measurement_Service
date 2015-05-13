@@ -99,13 +99,6 @@ static void power_manage(void)
     APP_ERROR_CHECK(err_code);
 }
 
-static void sleep(void)
-{
-    uint32_t err_code = sd_app_evt_wait();
-    APP_ERROR_CHECK(err_code);
-}
-
-
 /* Interrupt handler for ADC data ready event */
 void ADC_IRQHandler(void)
 {
