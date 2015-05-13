@@ -1,0 +1,32 @@
+
+T65B8 000:421 SEGGER J-Link V4.90e Log File (0001ms, 0268ms total)
+T65B8 000:421 DLL Compiled: Sep  8 2014 18:46:31 (0001ms, 0268ms total)
+T65B8 000:421 Logging started @ 2015-04-21 21:47 (0001ms, 0268ms total)
+T65B8 000:422 JLINK_SetWarnOutHandler(...) (0000ms, 0268ms total)
+T65B8 000:422 JLINK_OpenEx(...)
+Firmware: J-Link Lite-Cortex-M V8 compiled Jul 17 2014 11:40:12
+Hardware: V8.00
+S/N: 518109048
+Feature(s): GDB  returns O.K. (0260ms, 0528ms total)
+T65B8 000:682 JLINK_SetErrorOutHandler(...) (0000ms, 0528ms total)
+T65B8 000:682 JLINK_ExecCommand("ProjectFile = "C:\Keil_v5\ARM\Device\Nordic\nrf51822\Board\nrf6310\4D21_white_sensor\bootloader\arm\JLinkSettings.ini"", ...)  returns 0x00 (0001ms, 0529ms total)
+T65B8 000:683 JLINK_ExecCommand("Device = nRF51822_xxAA", ...)Device "NRF51822_XXAA" selected (257 KB flash, 16 KB RAM).  returns 0x00 (0000ms, 0529ms total)
+T65B8 000:683 JLINK_ExecCommand("DisableConnectionTimeout", ...)  returns 0x01 (0000ms, 0529ms total)
+T65B8 000:683 JLINK_GetHardwareVersion()  returns 0x13880 (0000ms, 0529ms total)
+T65B8 000:683 JLINK_GetDLLVersion()  returns 49005 (0000ms, 0529ms total)
+T65B8 000:684 JLINK_GetFirmwareString(...) (0000ms, 0529ms total)
+T65B8 000:684 JLINK_GetDLLVersion()  returns 49005 (0000ms, 0529ms total)
+T65B8 000:684 JLINK_GetCompileDateTime() (0000ms, 0529ms total)
+T65B8 000:684 JLINK_GetFirmwareString(...) (0000ms, 0529ms total)
+T65B8 000:684 JLINK_GetHardwareVersion()  returns 0x13880 (0000ms, 0529ms total)
+T65B8 000:684 JLINK_TIF_Select(JLINKARM_TIF_SWD)  returns 0x00 (0002ms, 0531ms total)
+T65B8 000:686 JLINK_SetSpeed(1000) (0000ms, 0531ms total)
+T65B8 000:687 JLINK_SetResetType(JLINKARM_RESET_TYPE_NORMAL)  returns JLINKARM_RESET_TYPE_NORMAL (0000ms, 0531ms total)
+T65B8 000:687 JLINK_Reset() >0x108 TIF>Found SWD-DP with ID 0x0BB11477 >0x35 TIF> >0x0D TIF> >0x28 TIF> >0x0D TIF> >0x28 TIF> >0x35 TIF> >0x0D TIF> >0x28 TIF> >0x35 TIF> >0x35 TIF> >0x35 TIF> >0x0D TIF> >0x28 TIF> >0x0D TIF> >0x28 TIF> >0x0D TIF> >0x28 TIF> >0x35 TIF> >0x35 TIF> >0x35 TIF> >0x0D TIF> >0x28 TIF> >0x0D TIF> >0x28 TIF> >0x35 TIF> >0x0D TIF> >0x28 TIF> >0x0D TIF> >0x28 TIF> >0x0D TIF> >0x28 TIF> >0x35 TIF> >0x35 TIF> >0x0D TIF> >0x28 TIF> >0x35 TIF> >0x35 TIF>
+Found Cortex-M0 r0p0, Little endian. -- CPU_WriteMem(4 bytes @ 0xE0002000) -- CPU_ReadMem(4 bytes @ 0xE000EDF0) -- CPU_ReadMem(4 bytes @ 0xE0002000)FPUnit: 4 code (BP) slots and 0 literal slots -- CPU_ReadMem(4 bytes @ 0xE000EDFC) -- CPU_ReadMem(4 bytes @ 0xE0001000) -- CPU_WriteMem(4 bytes @ 0xE0001000) -- CPU_ReadMem(4 bytes @ 0xE00FF018) -- CPU is running -- CPU_WriteMem(4 bytes @ 0xE000EDF0) -- CPU is running -- CPU_WriteMem(4 bytes @ 0xE000EDFC) >0x35 TIF> -- CPU is running
+ -- CPU_WriteMem(4 bytes @ 0xE000ED0C) -- CPU is running -- CPU_ReadMem(4 bytes @ 0xE000EDF0) -- CPU is running -- CPU_ReadMem(4 bytes @ 0xE000EDF0) -- CPU is running -- CPU_WriteMem(4 bytes @ 0xE000EDF0) -- CPU is running -- CPU_WriteMem(4 bytes @ 0xE000EDFC) -- CPU is running -- CPU_ReadMem(4 bytes @ 0xE000EDF0) -- CPU_WriteMem(4 bytes @ 0xE0002000) -- CPU_ReadMem(4 bytes @ 0xE000EDFC) -- CPU_ReadMem(4 bytes @ 0xE0001000) -- CPU_WriteMem(4 bytes @ 0xE0001000) (0052ms, 0583ms total)
+T65B8 000:739 JLINK_GetId() >0x35 TIF>  returns 0x0BB11477 (0001ms, 0584ms total)
+T65B8 000:745 JLINK_GetFirmwareString(...) (0000ms, 0584ms total)
+T65B8 001:515 JLINK_Close() -- CPU_WriteMem(4 bytes @ 0xE0001004) >0x42 TIF> >0x28 TIF> >0x35 TIF> (0005ms, 0589ms total)
+T65B8 001:515  (0005ms, 0589ms total)
+T65B8 001:515 Closed (0005ms, 0589ms total)
