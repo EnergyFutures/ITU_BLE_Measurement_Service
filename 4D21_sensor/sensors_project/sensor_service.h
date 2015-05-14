@@ -108,8 +108,6 @@ void iss_on_ble_evt(iss_t * p_iss, ble_evt_t * p_ble_evt);
  * @return      NRF_SUCCESS on success, otherwise an error code.
  */
 uint32_t update_iss_measurement(iss_t * p_iss, int32_t * p_new_meas);
-
-void update_sensor_DB(iss_t * p_iss);
 #endif // ITU_sensor_service_H__
 
 /** @} */

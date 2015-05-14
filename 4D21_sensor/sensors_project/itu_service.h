@@ -129,6 +129,8 @@ typedef struct mote_config_struct
 	char location_name [13];
 	uint8_t adv_freq_sec;
 	uint8_t block_count_percent_for_buffer_full;	
+	int8_t conn_trans_power;
+	int8_t non_conn_trans_power;
 } mote_config_struct_t;
 
 

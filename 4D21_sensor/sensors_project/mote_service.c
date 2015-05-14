@@ -5,7 +5,7 @@
 #include "pstorage.h"
 #include "mote_service.h"
 
-#define MAX_HTM_LEN   20 
+#define MAX_HTM_LEN   22 
 #define ONE_MEASUREMENT   8 
 #define TWO_MEASUREMENTS   16 
 #define CLOCK_TIME_OUT 800
@@ -13,7 +13,9 @@
 #define ITS_MOTE_CONFIG_DEVICE_NAME_BIT_PLACEMENT       											0             
 #define ITS_MOTE_CONFIG_LOCATION_NAME_BIT_PLACEMENT    												1             
 #define ITS_MOTE_CONFIG_ADVERTISEMENT_FREQUENCY_BIT_PLACEMENT           			2             
-#define ITS_MOTE_CONFIG_BLOCK_COUNT_PERCENTAGE_BIT_PLACEMENT             			3                        
+#define ITS_MOTE_CONFIG_BLOCK_COUNT_PERCENTAGE_BIT_PLACEMENT             			3 
+#define ITS_MOTE_CONFIG_CONN_POWER_BIT_PLACEMENT															4
+#define ITS_MOTE_CONFIG_NON_CONN_POWER_BIT_PLACEMENT													5
 
 
 static volatile uint16_t conn_handle;
@@ -100,6 +102,8 @@ static uint8_t conf_encode(uint8_t * p_encoded_buffer)
 		p_encoded_buffer[len++] = '\0';
 		p_encoded_buffer[len++] = mote_config_struct->adv_freq_sec;
 		p_encoded_buffer[len++] = mote_config_struct->block_count_percent_for_buffer_full;
+		p_encoded_buffer[len++] = mote_config_struct->conn_trans_power;
+		p_encoded_buffer[len++] = mote_config_struct->non_conn_trans_power;
     return len;
 }
 
@@ -151,6 +155,12 @@ static void conf_decode(uint16_t data_length, uint8_t * data)
 		}
 		if(BIT_VALUE(data_bits,ITS_MOTE_CONFIG_BLOCK_COUNT_PERCENTAGE_BIT_PLACEMENT)){
 			mote_config_struct->block_count_percent_for_buffer_full = data[i++];
+		}
+		if(BIT_VALUE(data_bits,ITS_MOTE_CONFIG_CONN_POWER_BIT_PLACEMENT)){
+			mote_config_struct->conn_trans_power = data[i++];
+		}
+		if(BIT_VALUE(data_bits,ITS_MOTE_CONFIG_NON_CONN_POWER_BIT_PLACEMENT)){
+			mote_config_struct->non_conn_trans_power = data[i++];
 		}
 		uint32_t error = app_sched_event_put(NULL, 0, reset_adv_sche);
 		APP_ERROR_CHECK(error);

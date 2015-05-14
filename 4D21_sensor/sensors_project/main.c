@@ -77,6 +77,8 @@ static mote_config_struct_t mote_config = {
 	.location_name = LOCATION_NAME,
 	.adv_freq_sec = DEFAULT_ADVERTISEMENT_FREQUENCY_IN_SEC,
 	.block_count_percent_for_buffer_full = BLOCK_COUNT_PROCENT,
+	.non_conn_trans_power = NONCONNECTABLE_TRANSMIT_POWER_DB,
+	.conn_trans_power = CONNECTABLE_TRANSMIT_POWER_DB
 };
 
 
@@ -196,7 +198,7 @@ static void gap_params_init(void)
 
     err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
     APP_ERROR_CHECK(err_code);
-		sd_ble_gap_tx_power_set(NONCONNECTABLE_TRANSMIT_POWER_DB);
+		sd_ble_gap_tx_power_set(mote_config.non_conn_trans_power);
 }
 
 /**@brief Function for initializing the Advertising functionality.
@@ -265,7 +267,7 @@ static void its_broadcast_encode_and_set(void * p_itu_service_struct, uint8_t ty
 		bool is_actuator = type;
     if(storage_struct.current_block > ((BLOCK_COUNT / 100 ) * mote_config.block_count_percent_for_buffer_full) && buffer_full != 1){
 			buffer_full = 1;
-			sd_ble_gap_tx_power_set(CONNECTABLE_TRANSMIT_POWER_DB);
+			sd_ble_gap_tx_power_set(mote_config.conn_trans_power);
 		}
 		
 		//BUFFER LEVEL
@@ -701,6 +703,8 @@ static void read_config(void){
 		}
 		mote_config.adv_freq_sec = config_cache_val[i++];
 		mote_config.block_count_percent_for_buffer_full = config_cache_val[i++];
+		mote_config.conn_trans_power = config_cache_val[i++];
+		mote_config.non_conn_trans_power = config_cache_val[i++];
 		for(int j = 0; j <SENSORS_SIZE; j++){
 			iss_t* service = (iss_t*) sensors[j]->service;
 			service->ID = uint16_decode(&config_cache_val[i]);
@@ -708,8 +712,9 @@ static void read_config(void){
 			service->coord = config_cache_val[i++];
 			service->samp_freq_in_m_sec = uint32_decode(&config_cache_val[i]);
 			i += 4;
-			update_sensor_DB(service);
+			iss_update_config(service);
 		}
+		sd_ble_gap_tx_power_set(mote_config.non_conn_trans_power);
 	}
 }
 #endif
@@ -729,7 +734,7 @@ static void storage_handler(pstorage_handle_t  * handle, uint8_t op_code, uint32
 	}else if(PSTORAGE_CLEAR_OP_CODE == op_code && storage_struct.pstorage_clearing){
 		storage_struct.pstorage_clearing = false;
 		//WE ONLY ENABLE MEASUREMENTS ONCE ALL CACHE IS CLEARED
-		sd_ble_gap_tx_power_set(NONCONNECTABLE_TRANSMIT_POWER_DB);
+		sd_ble_gap_tx_power_set(mote_config.non_conn_trans_power);
 		for(uint8_t i = 0; i < total_services_size; i++){
 			itu_service_t *service = all_services[i];
 			if(service->service_type == 0){
@@ -776,6 +781,8 @@ static void continue_config_persist(void *data, uint16_t size){
 	config_cache_val[index++] = '\0';
 	config_cache_val[index++] = mote_config.adv_freq_sec;
 	config_cache_val[index++] = mote_config.block_count_percent_for_buffer_full;
+	config_cache_val[index++] = mote_config.conn_trans_power;
+	config_cache_val[index++] = mote_config.non_conn_trans_power;
 	for(int j = 0; j <SENSORS_SIZE; j++){
 			iss_t* service = (iss_t*) sensors[j]->service;
 			index += uint16_encode(service->ID,&(config_cache_val[index]));
