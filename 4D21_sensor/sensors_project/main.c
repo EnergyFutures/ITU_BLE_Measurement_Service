@@ -661,7 +661,7 @@ static void persist_measurement(iss_t * iss_struct){
 		APP_ERROR_CHECK(error_code);
 		
 		uint32_encode(iss_struct->last_measurement,cache_val);
-		uint16_encode(iss_struct->curr_seq_nr,&(cache_val[SEQUENCE_NUMBER_OFFSET]));
+		uint16_encode(iss_struct->curr_seq_nr-1,&(cache_val[SEQUENCE_NUMBER_OFFSET]));
 		uint16_encode(iss_struct->ID,&(cache_val[ID_OFFSET]));
 		
 		storage_struct.pstorage_wait_flag = true;

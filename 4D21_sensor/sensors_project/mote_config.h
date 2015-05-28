@@ -2,7 +2,7 @@
 #define ITU_mote_config_H__
 
 #define DEVICE_NAME                          "NEWBORN"			                          
-#define LOCATION_NAME                        "4D21"
+#define LOCATION_NAME                        "XXX"
 #define LOCATION_NAME_CONFIG                 "YYY"
 #define CONNECTABLE_TRANSMIT_POWER_DB 4
 #define NONCONNECTABLE_TRANSMIT_POWER_DB -12
@@ -10,13 +10,13 @@
 #define DEFAULT_SAMPLING_FREQUENCY_IN_MS 60000
 #define DEFAULT_ADVERTISEMENT_FREQUENCY_IN_SEC 1
 //Old boards
-#define BUTTON_PIN 11
+//#define BUTTON_PIN 11
 //White boards
-//#define BUTTON_PIN 30
+#define BUTTON_PIN 30
 //Compact boards
 //#define BUTTON_PIN 29
 
-#define START_ID 16160
+#define START_ID 0
 
 
 //REMEMBER TO REGISTER YOUR SENSORS HERE AND COUNT UP
@@ -29,12 +29,12 @@ itu_service_t *sensors[SENSORS_SIZE];
 static void registerSensors(void){		
 	sensors[0] = getHumiditySensorSI7021();
 	sensors[1] = getTempSensorSI7021();
-	//sensors[2] = getLightSensorTSL2561();
+	//sensors[0] = getLightSensorTSL2561();
 }
 #endif
 
-
-#define ACTUATORS_SIZE 0
+//REMEMBER TO INCLUDE THE ACTUATORS
+#define ACTUATORS_SIZE 0 // if no actuators, then set to 0
 
 #define total_services_size (ACTUATORS_SIZE + SENSORS_SIZE)
 static itu_service_t *all_services[total_services_size];
