@@ -131,6 +131,7 @@ typedef struct mote_config_struct
 	uint8_t block_count_percent_for_buffer_full;	
 	int8_t conn_trans_power;
 	int8_t non_conn_trans_power;
+	bool force_connectable;
 } mote_config_struct_t;
 
 

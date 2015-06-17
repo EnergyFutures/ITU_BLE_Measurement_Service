@@ -75,6 +75,7 @@ static storage_struct_t storage_struct = {
 static mote_config_struct_t mote_config = {
 	.device_name = DEVICE_NAME,
 	.location_name = LOCATION_NAME,
+	.force_connectable = false,
 	.adv_freq_sec = DEFAULT_ADVERTISEMENT_FREQUENCY_IN_SEC,
 	.block_count_percent_for_buffer_full = BLOCK_COUNT_PROCENT,
 	.non_conn_trans_power = NONCONNECTABLE_TRANSMIT_POWER_DB,
@@ -133,17 +134,12 @@ static void battery_level_get(void)
 
 void app_error_handler(uint32_t error_code, uint32_t line_num, const uint8_t * p_file_name)
 {
-    //nrf_gpio_pin_set(ASSERT_LED_PIN_NO);
-
-    // This call can be used for debug purposes during application development.
-    // @note CAUTION: Activating this code will write the stack to flash on an error.
-    //                This function should NOT be used in a final product.
-    //                It is intended STRICTLY for development/debugging purposes.
-    //                The flash write will happen EVEN if the radio is active, thus interrupting
-    //                any communication.
-    //                Use with care. Un-comment the line below to use.
-		ble_debug_assert_handler(error_code, line_num, p_file_name);
-		while(true){;}
+		//ENABLE FOR DEBUG
+    //ble_debug_assert_handler(error_code, line_num, p_file_name);
+		//while(true){;}
+			
+		//ENABLE FOR PROD
+		sd_power_system_off();
 }
 
 
@@ -307,7 +303,7 @@ static void its_broadcast_encode_and_set(void * p_itu_service_struct, uint8_t ty
 		ble_data.data = data;		
     advdata.p_manuf_specific_data = &ble_data;
 		
-		if(buffer_full || ACTUATORS_SIZE > 0 || (strcmp(mote_config.device_name,DEVICE_NAME) == 0)){
+		if(buffer_full || ACTUATORS_SIZE > 0 || mote_config.force_connectable){
 				adv_params.type        = BLE_GAP_ADV_TYPE_ADV_IND;
 		}else{
 				adv_params.type        = BLE_GAP_ADV_TYPE_ADV_NONCONN_IND;
@@ -459,6 +455,7 @@ static void application_timers_stop(void *data, uint16_t size)
 static void reestablish_system(void *data, uint16_t size){
 	UNUSED_PARAMETER(data);
 	UNUSED_PARAMETER(size);
+	mote_config.force_connectable = false;
 	uint32_t err_code = app_sched_event_put(NULL, 0, advertising_start);
 	APP_ERROR_CHECK(err_code);
 	if(!storage_struct.pstorage_clearing){
@@ -855,6 +852,7 @@ void handle_config_pin_push(void *data, uint16_t size)
 {
 	UNUSED_PARAMETER(data);
 	UNUSED_PARAMETER(size);
+	
 	strcpy(mote_config.location_name,LOCATION_NAME_CONFIG);
 	uint32_t err_code;
 	err_code = sd_ble_gap_adv_stop();
@@ -865,13 +863,17 @@ void handle_config_pin_push(void *data, uint16_t size)
 }
 
 void gpiote_event_handler (uint32_t event_pins_low_to_high, uint32_t event_pins_high_to_low){
-	//
-	if((event_pins_high_to_low & (1 << BUTTON_PIN)) && (strcmp(mote_config.device_name,DEVICE_NAME) == 0) ){
-		if(strcmp(mote_config.location_name,LOCATION_NAME_CONFIG) == 0){
-			return;
+	if((event_pins_high_to_low & (1 << BUTTON_PIN))){
+		if(strcmp(mote_config.device_name,DEVICE_NAME) == 0){
+			if(strcmp(mote_config.location_name,LOCATION_NAME_CONFIG) == 0){
+				return;
+			}
+			uint32_t err_code = app_sched_event_put(NULL, 1, handle_config_pin_push);
+			APP_ERROR_CHECK(err_code);
+			mote_config.force_connectable = true;
+		}else{
+			mote_config.force_connectable = true;
 		}
-		uint32_t err_code = app_sched_event_put(NULL, 0, handle_config_pin_push);
-		APP_ERROR_CHECK(err_code);
 	}
 	if(do_measurements){
 		for(uint8_t i = 0; i < total_services_size; i++){
@@ -891,22 +893,18 @@ static void init_gpiote(){
 			all_services[i]->gpiote_init(&low_to_high_bitmask,&high_to_low_bitmask);
 		}
 	}
-	if(strcmp(mote_config.device_name,DEVICE_NAME) == 0){
-		NRF_GPIO->PIN_CNF[BUTTON_PIN] = (GPIO_PIN_CNF_SENSE_Disabled << GPIO_PIN_CNF_SENSE_Pos)
-                                        | (GPIO_PIN_CNF_DRIVE_S0S1 << GPIO_PIN_CNF_DRIVE_Pos)
-                                        | (GPIO_PIN_CNF_PULL_Pullup << GPIO_PIN_CNF_PULL_Pos)
-                                        | (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos)
-                                        | (GPIO_PIN_CNF_DIR_Input << GPIO_PIN_CNF_DIR_Pos);
-		high_to_low_bitmask |= (1 << BUTTON_PIN);
-	}
-	if(low_to_high_bitmask != 0 || high_to_low_bitmask != 0){
-		APP_GPIOTE_INIT(1);
-		uint32_t retval;
-		retval = app_gpiote_user_register(&m_example_user_id,low_to_high_bitmask,high_to_low_bitmask,gpiote_event_handler);
-		APP_ERROR_CHECK(retval);
-		retval = app_gpiote_user_enable(m_example_user_id);
-		APP_ERROR_CHECK(retval);
-	}
+	NRF_GPIO->PIN_CNF[BUTTON_PIN] = (GPIO_PIN_CNF_SENSE_Disabled << GPIO_PIN_CNF_SENSE_Pos)
+																			| (GPIO_PIN_CNF_DRIVE_S0S1 << GPIO_PIN_CNF_DRIVE_Pos)
+																			| (GPIO_PIN_CNF_PULL_Pullup << GPIO_PIN_CNF_PULL_Pos)
+																			| (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos)
+																			| (GPIO_PIN_CNF_DIR_Input << GPIO_PIN_CNF_DIR_Pos);
+	high_to_low_bitmask |= (1 << BUTTON_PIN);
+	APP_GPIOTE_INIT(1);
+	uint32_t retval;
+	retval = app_gpiote_user_register(&m_example_user_id,low_to_high_bitmask,high_to_low_bitmask,gpiote_event_handler);
+	APP_ERROR_CHECK(retval);
+	retval = app_gpiote_user_enable(m_example_user_id);
+	APP_ERROR_CHECK(retval);	
 }
 
 static void init_mote_service(void){
